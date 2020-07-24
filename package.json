@@ -1,0 +1,26 @@
+{
+  "name": "homebridge-adb",
+  "version": "0.0.1",
+  "description": "A simple homebridge plugin to control ADB enabled Android devices",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dwaan/homebridge-adb.git"
+  },
+  "keywords": [
+    "homebridge",
+    "homebridge-plugin",
+    "adb",
+    "android",
+    "homekit"
+  ],
+  "author": "dwaan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dwaan/homebridge-adb/issues"
+  },
+  "homepage": "https://github.com/dwaan/homebridge-adb#readme"
+}
