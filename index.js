@@ -1,4 +1,5 @@
 var exec = require('child_process').exec;
+var os = require( 'os' );
 var Accessory, Service, Characteristic;
 
 const PLUGIN_NAME = 'homebridge-adb';
@@ -41,13 +42,14 @@ class ADBPlugin {
 		this.Characteristic = this.api.hap.Characteristic;
 
 
-
 		/**
 		 * Create the accessory
 		 */
 
 		// generate a UUID
-		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + config.ip + this.name);
+		const networkInterfaces = os.networkInterfaces();
+		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name);
+		// this.log.info(uuid, 'homebridge:adb-plugin' + networkInterfaces.en0[0].address + this.ip + this.name);
 
 		// create the accessory
 		this.tvAccessory = new api.platformAccessory(this.name, uuid);
@@ -409,12 +411,18 @@ class ADBPlugin {
 				let otherApp = true;
 
 				// Identified current focused app
-				stdout = stdout.trim();
-				stdout = stdout.split("/");
-				stdout[0] = stdout[0].split(" ");
-				stdout[0] = stdout[0][4];
-				if (stdout[1].includes("Launcher")) stdout = this.inputs[0].id;
-				else stdout = stdout[0];
+				if (!stdout) {
+					stdout = stdout.trim();
+					stdout = stdout.split("/");
+					stdout[0] = stdout[0].split(" ");
+					stdout[0] = stdout[0][4];
+
+					this.log.info(this.ip, "----", stdout, stdout[1]);
+					if (stdout[1].includes("Launcher") || stdout[1].includes("MainActivity") || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
+					else stdout = stdout[0];
+				} else {
+					stdout = "com.android.screen.saver";
+				}
 
 				if (err) {
 					this.log.info(this.ip, "Can't get accessory status");
