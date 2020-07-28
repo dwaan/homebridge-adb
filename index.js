@@ -409,19 +409,18 @@ class ADBPlugin {
 
 			exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
 				let otherApp = true;
+				stdout = stdout.trim();
 
 				// Identified current focused app
-				if (!stdout) {
-					stdout = stdout.trim();
+				if (stdout) {
 					stdout = stdout.split("/");
 					stdout[0] = stdout[0].split(" ");
 					stdout[0] = stdout[0][4];
 
-					this.log.info(this.ip, "----", stdout, stdout[1]);
 					if (stdout[1].includes("Launcher") || stdout[1].includes("MainActivity") || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
 					else stdout = stdout[0];
 				} else {
-					stdout = "com.android.screen.saver";
+					stdout = "other";
 				}
 
 				if (err) {
@@ -451,10 +450,12 @@ class ADBPlugin {
 									else humanName += (" " + name[i]);
 							i++;
 						}
+						humanName = humanName.trim();
+						if (humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
 						this.currentAppIndex = this.inputs.length - 1;
 						this.inputs[this.currentAppIndex].id = stdout;
-						this.inputsAccessory[this.currentAppIndex].setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. Other (${humanName.trim()})`);
+						this.inputsAccessory[this.currentAppIndex].setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
 					}
 
 					this.tvService.setCharacteristic(this.Characteristic.ActiveIdentifier, this.currentAppIndex);
