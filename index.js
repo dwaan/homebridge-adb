@@ -34,6 +34,8 @@ class ADBPlugin {
 		this.currentAppIndex = 0;
 		this.currentAppOnProgress = false;
 		this.connected = false;
+		this.LIMITCONNECT = 5;
+		this.limitConnect = this.LIMITCONNECT;
 
 		this.Service = this.api.hap.Service;
 		this.Characteristic = this.api.hap.Characteristic;
@@ -57,7 +59,9 @@ class ADBPlugin {
 		this.tvService = this.tvAccessory.addService(this.Service.Television);
 
 		// set sleep discovery characteristic
-		this.tvService.setCharacteristic(this.Characteristic.SleepDiscoveryMode, this.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
+		this.tvService
+			.setCharacteristic(this.Characteristic.ConfiguredName, this.name)
+			.setCharacteristic(this.Characteristic.SleepDiscoveryMode, this.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
 		// handle [on / off]
 		this.tvService.getCharacteristic(this.Characteristic.Active)
@@ -72,6 +76,7 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
+						this.limitConnect = this.LIMITCONNECT;
 						callback(null);
 					});
 				} else {
@@ -83,6 +88,7 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
+						this.limitConnect = this.LIMITCONNECT;
 						callback(null);
 					});
 				}
@@ -301,7 +307,7 @@ class ADBPlugin {
 			this.inputsAccessory[i] = this.tvAccessory.addService(this.Service.InputSource, 'input' + i, 'Input ' + i + " - " + input.name);
 			this.inputsAccessory[i]
 				.setCharacteristic(this.Characteristic.Identifier, i)
-				.setCharacteristic(this.Characteristic.ConfiguredName, input.name)
+				.setCharacteristic(this.Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
 				.setCharacteristic(this.Characteristic.IsConfigured, this.Characteristic.IsConfigured.CONFIGURED)
 				.setCharacteristic(this.Characteristic.InputSourceType, type);
 			this.tvService.addLinkedService(this.inputsAccessory[i]);
@@ -330,7 +336,6 @@ class ADBPlugin {
 
 					    this.info
 					    	.setCharacteristic(this.Characteristic.Model, stdout[0] || "Android")
-							.setCharacteristic(this.Characteristic.ConfiguredName, this.name)
 					    	.setCharacteristic(this.Characteristic.Manufacturer, stdout[1] || "Google")
 					    	.setCharacteristic(this.Characteristic.SerialNumber, stdout[2] || this.ip);
 
@@ -361,15 +366,23 @@ class ADBPlugin {
 				this.log.info(this.ip, "- Can't connect to this accessory :(");
 			}
 
+			this.log.info(this.ip, "- Connection attempt", this.limitConnect);
+			this.limitConnect--;
+
 			callback(connected);
 		});
 	}
 
 	update(interval) {
 	  	// Update TV status every second -> or based on configuration
-	    setInterval(() => {
+	    this.intervalHandler = setInterval(() => {
 	    	this.checkPower();
 	    	if (this.awake) this.checkInput();
+
+	    	if (this.limitConnect <= 0) {
+				this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
+	    		clearInterval(this.intervalHandler);
+	    	}
 	    }, this.interval);
 	}
 
@@ -416,8 +429,24 @@ class ADBPlugin {
 
 					// Other app
 					if (otherApp) {
+						let name = stdout.split("."),
+							humanName = "",
+							i = 0;
+
+						// Extract human readable name from app package name
+						while(name[i]) {
+							name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
+							if (i > 0)
+								if (name[i] != "Com" && name[i] != "Android")
+									if (name[i] == "Vending") humanName += "Play Store";
+									else if (name[i] == "Gm") humanName += "GMail";
+									else humanName += (" " + name[i]);
+							i++;
+						}
+
 						this.currentAppIndex = this.inputs.length - 1;
 						this.inputs[this.currentAppIndex].id = stdout;
+						this.inputsAccessory[this.currentAppIndex].setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. Other (${humanName.trim()})`);
 					}
 
 					this.tvService.setCharacteristic(this.Characteristic.ActiveIdentifier, this.currentAppIndex);
