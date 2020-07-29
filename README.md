@@ -10,21 +10,46 @@ This plugins register it self as external accesorries, so make sure after you ad
 ## Prerequisite
 
 * Install Homebridge (and Homebridge UI X if you want) and this plugins
-`sudo npm install -g --unsafe-perm homebridge homebridge-adb`
+	```
+	sudo npm install -g --unsafe-perm homebridge homebridge-adb
+	```
 
 * Make sure you install ADB at the same machine as your Homebridge. 
 	*  If you're using Ubuntu, use this command:
-	`sudo apt-get install android-tools-adb android-tools-fastboot`
+		```
+		sudo apt-get install android-tools-adb android-tools-fastboot
+		```
 	*  If you're using Alpine Linux (Homebridge Docker image use this), use this command:
-	`RUN apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools`
+		```
+		RUN apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
+		```
 	*  For other OS and method please download it in here: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
-	*  When it properly installed, please check your ADB is up and running with this command: 	`adb version`
+	*  When it properly installed, please check your ADB is up and running with this command: 	
+		```
+		adb version
+		```
 	
 * Enable Developer mode in your Android device, visit this documentation to read more  [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* Some Android device have remote debug by default. If your device is not one of them, connect your device to your server (or any computer with ADB installed) and run: `adb tcpip 5555` after that just disconnect your device from your computer.
+* Some Android device have remote debug by default. If your device is not one of them, connect your device to your server (or any computer with ADB installed) and run:
+	```
+	adb tcpip 5555
+	``` 
+	after that just disconnect your device from your computer.
 
-* Run this command to make sure you can connect to device: `adb connect your-device-ip`. If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to do `adb kill-server` and reconnect your device again. After that, you should able to run this command `adb -s your-device-ip shell "getprop ro.product.model"` and get  your device model as the output.
+* Run this command to make sure you can connect to device: 
+	```
+	adb connect your-device-ip
+	```
+	If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to do 
+	```
+	adb kill-server
+	``` 
+	and reconnect your device again. After that, you should able to run this command 
+	```
+	adb -s your-device-ip shell "getprop ro.product.model"
+	``` 
+	and get  your device model as the output.
 
 
 
@@ -78,13 +103,34 @@ Here an example of configuration that you can use.
 
 ## ADB command that this script use
 
-* Device name `adb -s your-device-ip shell "getprop ro.product.manufacturer"`
-* Device model  `adb -s your-device-ip shell "getprop ro.product.model"`
-* Device serial number `adb -s your-device-ip "getprop ro.serialno"`
-* To run "keyboard" command like up, down, sleep, awake, volume control, etc `adb -s your-device-ip shell "input keyevent KEYCODE"`
-* To know device sleep status based on whether secreen is turned on or off `adb shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'`
-* Running an app using their package name `adb -s your-device-ip shell "monkey -p package.name 1`
-* To know current on screen app `adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"`
+* Device name 
+	```
+	adb -s your-device-ip shell "getprop ro.product.manufacturer"
+	```
+* Device model
+	```
+	adb -s your-device-ip shell "getprop ro.product.model"
+	```
+* Device serial number
+	```
+	adb -s your-device-ip "getprop ro.serialno"
+	```
+* To run "keyboard" command like up, down, sleep, awake, volume control, etc 
+	```
+	adb -s your-device-ip shell "input keyevent KEYCODE"
+	```
+* To know device sleep status based on whether secreen is turned on or off 
+	```
+	adb shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
+	```
+* Running an app using their package name 
+	```
+	adb -s your-device-ip shell "monkey -p package.name 1
+	```
+* To know current on screen app 
+	```
+	adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"
+	```
 
 
 ## FAQ
