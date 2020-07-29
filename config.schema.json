@@ -1,0 +1,131 @@
+{
+	"pluginAlias": "HomebridgeADB",
+	"pluginType": "platform",
+	"singular": true,
+	"headerDisplay": "A simple homebridge script to control remote ADB enabled Android device",
+	"footerDisplay": "For more information, see the [README](https://github.com/dwaan/homebridge-adb/blob/master/README.md)",
+	"schema": {
+		"accessories": {
+			"title": "Accessories",
+			"type": "array",
+			"required": true,
+			"items": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"title": "Name",
+						"placeholder": "Your Device Name",
+						"description": "Type your device name",
+						"type": "string",
+						"minLength": 1,
+						"required": true
+					},
+					"ip": {
+						"type": "string",
+						"title": "IP",
+						"placeholder": "192.168.0.100",
+						"description": "Type your device IP address",
+						"type": "string",
+						"format": "ipv4",
+						"required": true
+					},
+					"interval": {
+						"type": "number",
+						"placeholder": "5000",
+						"title": "Polling interval",
+						"description": "Check your device every ____ miliseconds",
+						"type": "number"
+					},
+					"inputs": {
+						"title": "Inputs",
+						"type": "array",
+						"description": "Add more inputs to your device",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"title": "App Name",
+									"type": "string",
+									"placeholder": "Your apps name",
+									"required": true,
+									"description": "Type your app name"
+								},
+								"id": {
+									"title": "App ID",
+									"type": "string",
+									"placeholder": "com.your.app.name",
+									"required": true,
+									"description": "Check Homebridge logs for current App ID"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"layout": [
+		{
+			"key": "accessories",
+			"type": "array",
+			"items": [
+				{
+					"type": "div",
+					"displayFlex": true,
+					"items": [
+						{
+							"type": "div",
+							"displayFlex": true,
+							"flex-direction": "row",
+							"items": [
+								{
+									"key": "accessories[].name"
+								}
+							]
+						},
+						{
+							"type": "div",
+							"displayFlex": true,
+							"flex-direction": "row",
+							"items": [
+								{
+									"key": "accessories[].ip",
+									"flex": "1 1 50px"
+								},
+								{
+									"key": "accessories[].interval",
+									"flex": "1 1 50px"
+								}
+							]
+						},
+					    {
+					    	"type": "array",
+							"key": "accessories[].inputs",
+							"expandable": true,
+							"expanded": false,
+							"items": [
+								{
+
+									"type": "div",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].inputs[].id",
+											"flex": "4 4 50px"
+										},
+										{
+											"key": "accessories[].inputs[].name",
+											"flex": "3 3 50px"
+										}
+									]
+								}
+							]
+					    }
+					]
+				}
+			]
+		}
+	]
+}
