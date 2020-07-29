@@ -5,6 +5,8 @@ var Accessory, Service, Characteristic;
 const PLUGIN_NAME = 'homebridge-adb';
 const PLATFORM_NAME = 'HomebridgeADB';
 const SLEEP_COMMAND = `dumpsys power | grep mHoldingDisplay | cut -d = -f 2`;
+const NO_STATUS = "Can't communicate to device, please check your ADB connection manually";
+const LIMIT_RETRY = 5;
 
 module.exports = (homebridge) => {
 	homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, ADBPluginPlatform, true);
@@ -22,24 +24,32 @@ class ADBPlugin {
 		this.api = api;
 
 	    // Configuration
-		this.ip = this.config.ip;
+		// Name
 		this.name = this.config.name || 'Android Device';
+		// IP
+		this.ip = this.config.ip;
 		if (!this.ip) {
 		    this.log.info(`Please provide IP for this accessory: ${this.name}`);
 			return;
 		}
+		// Interval
 		this.interval = this.config.interval || 5000;
+		// Inputs
+		this.inputs = this.config.inputs;
+		if(!this.inputs) this.inputs = [];
+		this.inputs.unshift({ "name": "Home", "id": "home" });
+		this.inputs.push({ "name": "Other", "id": "other" });
 
 		// Variable
 		this.awake = false;
 		this.currentAppIndex = 0;
 		this.currentAppOnProgress = false;
 		this.connected = false;
-		this.LIMITCONNECT = 5;
-		this.limitConnect = this.LIMITCONNECT;
+		this.limitRetry = LIMIT_RETRY;
 
 		this.Service = this.api.hap.Service;
 		this.Characteristic = this.api.hap.Characteristic;
+
 
 
 		/**
@@ -48,23 +58,148 @@ class ADBPlugin {
 
 		// generate a UUID
 		const networkInterfaces = os.networkInterfaces();
-		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name);
-		// this.log.info(uuid, 'homebridge:adb-plugin' + networkInterfaces.en0[0].address + this.ip + this.name);
+		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + networkInterfaces.en0[0].address + this.ip + this.name);
 
-		// create the accessory
-		this.tvAccessory = new api.platformAccessory(this.name, uuid);
+		// create the external accessory
+		this.tv = new this.api.platformAccessory(this.name, uuid);
 
-		// set the accessory category
-		this.tvAccessory.category = this.api.hap.Categories.TELEVISION;
+		// set the external accessory category
+		this.tv.category = this.api.hap.Categories.TELEVISION;
 
 		// add the tv service
-		this.tvService = this.tvAccessory.addService(this.Service.Television);
+		this.tvService = this.tv.addService(this.Service.Television);
 
-		// set sleep discovery characteristic
+		// get the tv information
+		this.tvInfo = this.tv.getService(this.Service.AccessoryInformation);
+
+
+
+		// set tv service name
 		this.tvService
 			.setCharacteristic(this.Characteristic.ConfiguredName, this.name)
 			.setCharacteristic(this.Characteristic.SleepDiscoveryMode, this.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
+
+
+		// Create additional services
+	    this.createInputs();
+	    this.createSpeakers();
+
+
+
+	    // Handle input
+	    this.handleOnOff();
+		this.handleInput();
+		this.handleMediaStatus();
+		this.handleMediaStates();
+		this.handleRemoteControl();
+
+
+
+		/**
+		 * Publish as external accessory
+		 * Check ADB connection before publishing the accesory
+		 */
+
+		this.connect((connected) => {
+			this.connected = connected;
+
+			if (this.connected) {
+				// get the acceory information and send it to HB
+				exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout, stderr) => {
+					if (err) {
+						this.log.info(this.ip, "- Can't get accessory information");
+						this.log.info(this.ip, "- Please check you ADB connection to this accessory, manually");
+					} else {
+						stdout = stdout.split("\n");
+
+					    this.tvInfo
+					    	.setCharacteristic(this.Characteristic.Model, stdout[0] || "Android")
+					    	.setCharacteristic(this.Characteristic.Manufacturer, stdout[1] || "Google")
+					    	.setCharacteristic(this.Characteristic.SerialNumber, stdout[2] || this.ip);
+
+						// Publish the accessories
+						this.api.publishExternalAccessories(PLUGIN_NAME, [this.tv]);
+					}
+				});
+			} else {
+				this.log.info(this.ip, "- Please check you ADB connection to this accessory, manually");
+			}
+		});
+	}
+
+	createInputs() {
+		/**
+		 * Create TV Input Source Services
+		 * These are the inputs the user can select from.
+		 * When a user selected an input the corresponding Identifier Characteristic
+		 * is sent to the TV Service ActiveIdentifier Characteristic handler.
+		 */
+
+		this.inputs.forEach((input, i) => {
+			let type = this.Characteristic.InputSourceType.APPLICATION;
+			if (i == 0) type = this.Characteristic.InputSourceType.HOME_SCREEN;
+			else if (i == this.inputs.length - 1) type = this.Characteristic.InputSourceType.OTHER;
+
+			// this.log.info(this.tv.Television.linkedServices);
+			// input.service = this.tv.addService(this.Service.InputSource, `Input ${i} - ${input.name}`, `Input ${i} - ${input.name}`);
+	        input.service = new this.Service.InputSource(`Input ${i} - ${input.name}`, `Input ${i} - ${input.name}`);
+			input.service
+				.setCharacteristic(this.Characteristic.Identifier, i)
+				.setCharacteristic(this.Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
+				.setCharacteristic(this.Characteristic.IsConfigured, this.Characteristic.IsConfigured.CONFIGURED)
+				.setCharacteristic(this.Characteristic.InputSourceType, type);
+			this.tvService.addLinkedService(input.service);
+
+			this.inputs[i].service = input.service;
+		});
+	}
+
+	createSpeakers() {
+		/**
+		 * Create a speaker service to allow volume control
+		 */
+
+		this.tvSpeakerService = this.tv.addService(this.Service.TelevisionSpeaker);
+
+		this.tvSpeakerService
+			.setCharacteristic(this.Characteristic.Active, this.Characteristic.Active.ACTIVE)
+			.setCharacteristic(this.Characteristic.VolumeControlType, this.Characteristic.VolumeControlType.ABSOLUTE);
+
+		// handle [volume control]
+		this.tvSpeakerService.getCharacteristic(this.Characteristic.VolumeSelector)
+			.on('set', (state, callback) => {
+				var key = "";
+
+				if(state) key = "KEYCODE_VOLUME_DOWN";
+				else key = "KEYCODE_VOLUME_UP";
+
+				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
+					if (err) {
+						this.log.info(this.ip, '- Can\'t set volume: ' + key);
+					} else {
+						this.log.info(this.ip, '- Sending: ' + key);
+					}
+				});
+
+				callback(null);
+			});
+
+		// handle [mute control] - not implemented yet
+		this.tvSpeakerService.getCharacteristic(this.Characteristic.Mute)
+			.on('get', (callback) => {
+				this.log.debug(this.ip, 'Triggered GET Mute');
+
+				callback(null);
+			})
+			.on('set', (state, callback) => {
+				this.log.debug(this.ip, 'Triggered SET Mute:' + state);
+
+				callback(null);
+			});
+	}
+
+	handleOnOff() {
 		// handle [on / off]
 		this.tvService.getCharacteristic(this.Characteristic.Active)
 			.on('set', (state, callback) => {
@@ -78,7 +213,7 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
-						this.limitConnect = this.LIMITCONNECT;
+						this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
 				} else {
@@ -90,14 +225,14 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
-						this.limitConnect = this.LIMITCONNECT;
+						this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
 				}
 			}).on('get', (callback) => {
 				exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
 					if (err) {
-						this.log.info(this.ip, "Can't get accessory status");
+						this.log.info(this.ip, NO_STATUS);
 					} else {
 						var output = stdout.trim();
 
@@ -110,7 +245,9 @@ class ADBPlugin {
 			    callback(null, this.awake);
 				});
 			});
+	}
 
+	handleInput() {
 		// handle [input source]
 		this.tvService.getCharacteristic(this.Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
@@ -130,7 +267,9 @@ class ADBPlugin {
 
 				callback(null);
 			});
+	}
 
+	handleMediaStatus() {
 		// handle [media status] - not implemented yet
 		this.tvService.getCharacteristic(this.Characteristic.CurrentMediaState)
 			.on('set', (state, callback) => {
@@ -147,7 +286,9 @@ class ADBPlugin {
 
 				callback(null);
 			});
+	}
 
+	handleMediaStates() {
 		// handle [media state] - not implemented yet
 		this.tvService.getCharacteristic(this.Characteristic.TargetMediaState)
 			.on('get', (callback) => {
@@ -170,7 +311,9 @@ class ADBPlugin {
 
 				callback(null);
 			});
+	}
 
+	handleRemoteControl() {
 		// handle [remote control]
 		this.tvService.getCharacteristic(this.Characteristic.RemoteKey)
 			.on('set', (state, callback) => {
@@ -241,157 +384,12 @@ class ADBPlugin {
 					callback(null);
 				});
 			});
-
-
-
-		/**
-		 * Create a speaker service to allow volume control
-		 */
-
-		this.speakerService = this.tvAccessory.addService(this.Service.TelevisionSpeaker);
-
-		this.speakerService
-			.setCharacteristic(this.Characteristic.Active, this.Characteristic.Active.ACTIVE)
-			.setCharacteristic(this.Characteristic.VolumeControlType, this.Characteristic.VolumeControlType.ABSOLUTE);
-
-		// handle [volume control]
-		this.speakerService.getCharacteristic(this.Characteristic.VolumeSelector)
-			.on('set', (state, callback) => {
-				var key = "";
-
-				if(state) key = "KEYCODE_VOLUME_DOWN";
-				else key = "KEYCODE_VOLUME_UP";
-
-				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
-					if (err) {
-						this.log.info(this.ip, '- Can\'t set volume: ' + key);
-					} else {
-						this.log.info(this.ip, '- Sending: ' + key);
-					}
-				});
-
-				callback(null);
-			});
-
-		// handle [mute control] - not implemented yet
-		this.speakerService.getCharacteristic(this.Characteristic.Mute)
-			.on('get', (callback) => {
-				this.log.debug(this.ip, 'Triggered GET Mute');
-
-				callback(null);
-			})
-			.on('set', (state, callback) => {
-				this.log.debug(this.ip, 'Triggered SET Mute:' + state);
-
-				callback(null);
-			});
-
-
-
-		/**
-		 * Create TV Input Source Services
-		 * These are the inputs the user can select from.
-		 * When a user selected an input the corresponding Identifier Characteristic
-		 * is sent to the TV Service ActiveIdentifier Characteristic handler.
-		 */
-
-		this.inputs = this.config.inputs;
-		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": "home" });
-		this.inputs.push({ "name": "Other", "id": "other" });
-
-		this.inputsAccessory = [];
-		this.inputs.forEach((input, i) => {
-			let type = this.Characteristic.InputSourceType.APPLICATION;
-			if (i == 0) type = this.Characteristic.InputSourceType.HOME_SCREEN;
-			else if (i == this.inputs.length - 1) type = this.Characteristic.InputSourceType.OTHER;
-
-			this.inputsAccessory[i] = this.tvAccessory.addService(this.Service.InputSource, 'input' + i, 'Input ' + i + " - " + input.name);
-			this.inputsAccessory[i]
-				.setCharacteristic(this.Characteristic.Identifier, i)
-				.setCharacteristic(this.Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
-				.setCharacteristic(this.Characteristic.IsConfigured, this.Characteristic.IsConfigured.CONFIGURED)
-				.setCharacteristic(this.Characteristic.InputSourceType, type);
-			this.tvService.addLinkedService(this.inputsAccessory[i]);
-		});
-
-
-		/**
-		 * Publish as external accessory
-		 * Check ADB connection before publishing the accesory
-		 */
-
-
-		this.connect((connected) => {
-			this.connected = connected;
-
-			if (this.connected) {
-				// get the acceory information and send it to HB
-				exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout, stderr) => {
-					if (err) {
-						this.log.info(this.ip, "- Can't get accessory information");
-						this.log.info(this.ip, "- Please check you ADB connection to this accessory manually");
-					} else {
-						stdout = stdout.split("\n");
-						// set the tv information
-						this.info = this.tvAccessory.getService(this.Service.AccessoryInformation);
-
-					    this.info
-					    	.setCharacteristic(this.Characteristic.Model, stdout[0] || "Android")
-					    	.setCharacteristic(this.Characteristic.Manufacturer, stdout[1] || "Google")
-					    	.setCharacteristic(this.Characteristic.SerialNumber, stdout[2] || this.ip);
-
-						// Publish the acceory
-						this.api.publishExternalAccessories(PLUGIN_NAME, [this.tvAccessory]);
-					}
-				});
-			} else {
-				this.log.info(this.ip, "- Please check you ADB connection to this accessory manually");
-			}
-		});
-	}
-
-	connect(callback) {
-		exec(`adb disconnect ${this.ip} > /dev/null && adb connect ${this.ip}`, (err, stdout, stderr) => {
-			var connected = false;
-
-			if (!err) {
-				connected = stdout.trim();
-				connected = connected.includes("connected");
-			}
-
-			if (connected) {
-				this.update();
-				this.log.info(this.ip, "- Connected");
-			} else {
-				exec(`adb disconnect ${this.ip}`);
-				this.log.info(this.ip, "- Can't connect to this accessory :(");
-			}
-
-			this.log.info(this.ip, "- Connection attempt", this.limitConnect);
-			this.limitConnect--;
-
-			callback(connected);
-		});
-	}
-
-	update(interval) {
-	  	// Update TV status every second -> or based on configuration
-	    this.intervalHandler = setInterval(() => {
-	    	this.checkPower();
-	    	if (this.awake) this.checkInput();
-
-	    	if (this.limitConnect <= 0) {
-				this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
-	    		clearInterval(this.intervalHandler);
-	    	}
-	    }, this.interval);
 	}
 
 	checkPower() {
 		exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
 			if (err) {
-				this.log.info(this.ip, "Can't get accessory status");
+				this.log.info(this.ip, NO_STATUS);
 			} else {
 				var output = stdout.trim();
 
@@ -424,7 +422,7 @@ class ADBPlugin {
 				}
 
 				if (err) {
-					this.log.info(this.ip, "Can't get accessory status");
+					this.log.info(this.ip, NO_STATUS);
 				} else if (this.inputs[this.currentAppIndex].id != stdout) {
 					this.inputs.forEach((input, i) => {
 						// Home or registered app
@@ -454,8 +452,8 @@ class ADBPlugin {
 						if (humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
 						this.currentAppIndex = this.inputs.length - 1;
-						this.inputs[this.currentAppIndex].id = stdout;
-						this.inputsAccessory[this.currentAppIndex].setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
+						if (this.inputs[this.currentAppIndex]) this.inputs[this.currentAppIndex].id = stdout;
+						if (this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
 					}
 
 					this.tvService.setCharacteristic(this.Characteristic.ActiveIdentifier, this.currentAppIndex);
@@ -465,6 +463,43 @@ class ADBPlugin {
 				this.currentAppOnProgress = false;
 			});
 		}
+	}
+
+	connect(callback) {
+		exec(`adb disconnect ${this.ip} > /dev/null && adb connect ${this.ip}`, (err, stdout, stderr) => {
+			var connected = false;
+
+			if (!err) {
+				connected = stdout.trim();
+				connected = connected.includes("connected");
+			}
+
+			if (connected) {
+				this.update();
+				this.log.info(this.ip, "- Connected");
+			} else {
+				exec(`adb disconnect ${this.ip}`);
+				this.log.info(this.ip, "- Can't connect to this accessory :(");
+			}
+
+			this.log.info(this.ip, "- Connection attempt", this.limitRetry);
+			this.limitRetry--;
+
+			callback(connected);
+		});
+	}
+
+	update(interval) {
+	  	// Update TV status every second -> or based on configuration
+	    this.intervalHandler = setInterval(() => {
+	    	this.checkPower();
+	    	if (this.awake) this.checkInput();
+
+	    	if (this.limitRetry <= 0) {
+				this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
+	    		clearInterval(this.intervalHandler);
+	    	}
+	    }, this.interval);
 	}
 }
 
@@ -496,12 +531,5 @@ class ADBPluginPlatform {
 			this.log.info('Please add one or more accessories in your config');
 			this.log.info('------------------------------------------------');
 		}
-	}
-
-	configureAccessory(platformAccessory) {
-	}
-
-	removeAccessory(platformAccessory) {
-		this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [platformAccessory]);
 	}
 }
