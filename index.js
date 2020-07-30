@@ -144,6 +144,8 @@ class ADBPlugin {
 				input = this.inputs[i],
 				type = Characteristic.InputSourceType.APPLICATION,
 				configured = Characteristic.IsConfigured.CONFIGURED,
+				targetVisibility = Characteristic.TargetVisibilityState.SHOWN,
+				currentVisibility = Characteristic.CurrentVisibilityState.SHOWN,
 				name = "";
 
 			if (i == 0) type = Characteristic.InputSourceType.HOME_SCREEN;
@@ -155,20 +157,25 @@ class ADBPlugin {
 			if (i >= this.inputs.length) {
 				// Create hidden input for future modification
 				configured = Characteristic.IsConfigured.NOT_CONFIGURED;
+				targetVisibility = Characteristic.TargetVisibilityState.HIDDEN;
+				currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
 				name = `${humanNumber}. Hidden Input`;
 			} else {
-				name = input.name;
+				name = `${humanNumber}. ${input.name}`;
 			}
 
-			let service = this.tv.addService(Service.InputSource, `Input ${i} - ${name}`, i);
+			this.log.info(this.ip, name, targetVisibility, currentVisibility);
+			let service = this.tv.addService(Service.InputSource, `Input - ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
-				.setCharacteristic(Characteristic.ConfiguredName, `${humanNumber}. ${name}`)
+				.setCharacteristic(Characteristic.ConfiguredName, name)
 				.setCharacteristic(Characteristic.InputSourceType, type)
+				.setCharacteristic(Characteristic.TargetVisibilityState, targetVisibility)
+				.setCharacteristic(Characteristic.CurrentVisibilityState, currentVisibility)
 				.setCharacteristic(Characteristic.IsConfigured, configured);
+			this.tvService.addLinkedService(service);
 
 			if (configured == Characteristic.IsConfigured.CONFIGURED) {
-				this.tvService.addLinkedService(service);
 				this.inputs[i].service = service;
 			}
 
@@ -218,7 +225,7 @@ class ADBPlugin {
 				callback(null);
 			});
 
-    this.tvService.addLinkedService(this.tvSpeakerService);
+	    this.tvService.addLinkedService(this.tvSpeakerService);
 	}
 
 	handleOnOff() {
@@ -314,12 +321,12 @@ class ADBPlugin {
 		// handle [media state] - not implemented yet
 		this.tvService.getCharacteristic(Characteristic.TargetMediaState)
 			.on('get', (callback) => {
-				if(state == Characteristic.TargetMediaState.PLAY)
-					this.log.info(this.ip, '- Get Media: Accessory is playing');
-				else if(state == Characteristic.TargetMediaState.PAUSE)
-					this.log.info(this.ip, '- Get Media: Accessory is paused');
-				else
-					this.log.info(this.ip, '- Get Media: Accessory is stoped');
+				// if(state == Characteristic.TargetMediaState.PLAY)
+				// 	this.log.info(this.ip, '- Get Media: Accessory is playing');
+				// else if(state == Characteristic.TargetMediaState.PAUSE)
+				// 	this.log.info(this.ip, '- Get Media: Accessory is paused');
+				// else
+				// 	this.log.info(this.ip, '- Get Media: Accessory is stoped');
 
 				callback(null);
 			})
