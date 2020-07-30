@@ -34,7 +34,16 @@
 							"type": "number",
 							"title": "Polling interval",
 							"placeholder": "Check your device every n miliseconds",
-							"type": "number"
+							"type": "number",
+							"default": "5000",
+					        "oneOf": [
+								{ "title": "500", "enum": ["500"] },
+								{ "title": "1000", "enum": ["1000"] },
+								{ "title": "2500", "enum": ["2500"] },
+								{ "title": "5000", "enum": ["5000"] },
+								{ "title": "7500", "enum": ["7500"] },
+								{ "title": "10000", "enum": ["10000"] }
+					        ]
 						},
 						"inputs": {
 							"title": "Inputs",
@@ -100,8 +109,8 @@
 							"key": "accessories[].inputs",
 					    	"type": "array",
 							"expandable": true,
-							"expanded": true,
-							"description": "Add more inputs to your device. Check Homebridge logs for current App ID",
+							"expanded": false,
+							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID",
 							"items": [
 								{
 

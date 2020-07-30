@@ -40,6 +40,8 @@ class ADBPlugin {
 		}
 		// Interval
 		this.interval = this.config.interval || 5000;
+		// Can't be lower than 300 miliseconds, it will flood your network
+		if (this.interval < 300) this.interval = 300;
 		// Inputs
 		this.inputs = this.config.inputs;
 		if(!this.inputs) this.inputs = [];
@@ -129,24 +131,48 @@ class ADBPlugin {
 		 * These are the inputs the user can select from.
 		 * When a user selected an input the corresponding Identifier Characteristic
 		 * is sent to the TV Service ActiveIdentifier Characteristic handler.
-		 */
 
-		// TODO: create 50 inputs (- current inputs) unconfigured and hidden input for extra.
-		this.inputs.forEach((input, i) => {
-			let type = Characteristic.InputSourceType.APPLICATION;
+		 * This plugins will create 50 inputs (- current inputs) unconfigured
+		 * and hidden input for future modification. Home app seems have problem
+		 * to add new input after initial add of the accessory. The newly
+		 * created inputs will shown up as related accesorries instead of
+		 * input accessories
+		**/
+
+		for (let i = 0; i < 50; i++) {
+			let
+				input = this.inputs[i],
+				type = Characteristic.InputSourceType.APPLICATION,
+				configured = Characteristic.IsConfigured.CONFIGURED,
+				name = "";
+
 			if (i == 0) type = Characteristic.InputSourceType.HOME_SCREEN;
 			else if (i == this.inputs.length - 1) type = Characteristic.InputSourceType.OTHER;
 
-			input.service = this.tv.addService(Service.InputSource, `Input ${i} - ${input.name}`, i);
-			input.service
-				.setCharacteristic(Characteristic.Identifier, i)
-				.setCharacteristic(Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
-				.setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
-				.setCharacteristic(Characteristic.InputSourceType, type);
+			let humanNumber = i + 1;
+			if (humanNumber < 10) humanNumber = "0" + (i + 1);
 
-			this.inputs[i].service = input.service;
-			this.tvService.addLinkedService(input.service);
-		});
+			if (i >= this.inputs.length) {
+				// Create hidden input for future modification
+				configured = Characteristic.IsConfigured.NOT_CONFIGURED;
+				name = `${humanNumber}. Hidden Input`;
+			} else {
+				name = input.name;
+			}
+
+			let service = this.tv.addService(Service.InputSource, `Input ${i} - ${name}`, i);
+			service
+				.setCharacteristic(Characteristic.Identifier, i)
+				.setCharacteristic(Characteristic.ConfiguredName, `${humanNumber}. ${name}`)
+				.setCharacteristic(Characteristic.InputSourceType, type)
+				.setCharacteristic(Characteristic.IsConfigured, configured);
+
+			if (configured == Characteristic.IsConfigured.CONFIGURED) {
+				this.tvService.addLinkedService(service);
+				this.inputs[i].service = service;
+			}
+
+		};
 	}
 
 	createSpeakers() {
@@ -228,7 +254,7 @@ class ADBPlugin {
 			}).on('get', (callback) => {
 				exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
 					if (err) {
-						this.log.info(this.ip, NO_STATUS);
+						this.log.info(this.ip, `Can't switch power state of the accessory`, NO_STATUS);
 					} else {
 						var output = stdout.trim();
 
@@ -385,7 +411,7 @@ class ADBPlugin {
 	checkPower() {
 		exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
 			if (err) {
-				this.log.info(this.ip, NO_STATUS);
+				this.log.info(this.ip, `No power state from the accessory`, NO_STATUS);
 			} else {
 				var output = stdout.trim();
 
@@ -418,7 +444,7 @@ class ADBPlugin {
 				}
 
 				if (err) {
-					this.log.info(this.ip, NO_STATUS);
+					this.log.info(this.ip, `No inputs states from the accessory`, NO_STATUS);
 				} else if (this.inputs[this.currentAppIndex].id != stdout) {
 					this.inputs.forEach((input, i) => {
 						// Home or registered app
