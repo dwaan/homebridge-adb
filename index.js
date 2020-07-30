@@ -1,6 +1,6 @@
-var exec = require('child_process').exec;
-var os = require( 'os' );
-var Accessory, Service, Characteristic;
+let exec = require('child_process').exec;
+let os = require( 'os' );
+let Service, Characteristic, Homebridge, Accessory;
 
 const PLUGIN_NAME = 'homebridge-adb';
 const PLATFORM_NAME = 'HomebridgeADB';
@@ -8,22 +8,29 @@ const SLEEP_COMMAND = `dumpsys power | grep mHoldingDisplay | cut -d = -f 2`;
 const NO_STATUS = "Can't communicate to device, please check your ADB connection manually";
 const LIMIT_RETRY = 5;
 
+const OTHER_APP_ID = "other";
+const HOME_APP_ID = "home";
+
 module.exports = (homebridge) => {
+  Service = homebridge.hap.Service;
+  Characteristic = homebridge.hap.Characteristic;
+  Homebridge = homebridge;
+  Accessory = homebridge.platformAccessory;
 	homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, ADBPluginPlatform, true);
 };
 
 
 class ADBPlugin {
 	constructor(log, config, api) {
-	    if (!config) {
-	      return;
-	    }
+    if (!config) {
+      return;
+    }
 
 		this.log = log;
 		this.config = config;
 		this.api = api;
 
-	    // Configuration
+    // Configuration
 		// Name
 		this.name = this.config.name || 'Android Device';
 		// IP
@@ -37,8 +44,8 @@ class ADBPlugin {
 		// Inputs
 		this.inputs = this.config.inputs;
 		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": "home" });
-		this.inputs.push({ "name": "Other", "id": "other" });
+		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
+		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 
 		// Variable
 		this.awake = false;
@@ -46,10 +53,6 @@ class ADBPlugin {
 		this.currentAppOnProgress = false;
 		this.connected = false;
 		this.limitRetry = LIMIT_RETRY;
-
-		this.Service = this.api.hap.Service;
-		this.Characteristic = this.api.hap.Characteristic;
-
 
 
 		/**
@@ -67,34 +70,28 @@ class ADBPlugin {
 		this.tv.category = this.api.hap.Categories.TELEVISION;
 
 		// add the tv service
-		this.tvService = this.tv.addService(this.Service.Television);
+		this.tvService = this.tv.addService(Service.Television);
 
 		// get the tv information
-		this.tvInfo = this.tv.getService(this.Service.AccessoryInformation);
-
-
+		this.tvInfo = this.tv.getService(Service.AccessoryInformation);
 
 		// set tv service name
 		this.tvService
-			.setCharacteristic(this.Characteristic.ConfiguredName, this.name)
-			.setCharacteristic(this.Characteristic.SleepDiscoveryMode, this.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
+			.setCharacteristic(Characteristic.ConfiguredName, this.name)
+			.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
-
-
-		// Create additional services
-	    this.createInputs();
-	    this.createSpeakers();
-
-
-
-	    // Handle input
-	    this.handleOnOff();
+    // Handle input
+    this.handleOnOff();
 		this.handleInput();
 		this.handleMediaStatus();
 		this.handleMediaStates();
 		this.handleRemoteControl();
 
 
+
+		// Create additional services
+    this.createInputs();
+    this.createSpeakers();
 
 		/**
 		 * Publish as external accessory
@@ -113,10 +110,10 @@ class ADBPlugin {
 					} else {
 						stdout = stdout.split("\n");
 
-					    this.tvInfo
-					    	.setCharacteristic(this.Characteristic.Model, stdout[0] || "Android")
-					    	.setCharacteristic(this.Characteristic.Manufacturer, stdout[1] || "Google")
-					    	.setCharacteristic(this.Characteristic.SerialNumber, stdout[2] || this.ip);
+				    this.tvInfo
+				    	.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
+				    	.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
+				    	.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 
 						// Publish the accessories
 						this.api.publishExternalAccessories(PLUGIN_NAME, [this.tv]);
@@ -136,22 +133,21 @@ class ADBPlugin {
 		 * is sent to the TV Service ActiveIdentifier Characteristic handler.
 		 */
 
+		// TODO: create 50 inputs (- current inputs) unconfigured and hidden input for extra.
 		this.inputs.forEach((input, i) => {
-			let type = this.Characteristic.InputSourceType.APPLICATION;
-			if (i == 0) type = this.Characteristic.InputSourceType.HOME_SCREEN;
-			else if (i == this.inputs.length - 1) type = this.Characteristic.InputSourceType.OTHER;
+			let type = Characteristic.InputSourceType.APPLICATION;
+			if (i == 0) type = Characteristic.InputSourceType.HOME_SCREEN;
+			else if (i == this.inputs.length - 1) type = Characteristic.InputSourceType.OTHER;
 
-			// this.log.info(this.tv.Television.linkedServices);
-			// input.service = this.tv.addService(this.Service.InputSource, `Input ${i} - ${input.name}`, `Input ${i} - ${input.name}`);
-	        input.service = new this.Service.InputSource(`Input ${i} - ${input.name}`, `Input ${i} - ${input.name}`);
+			input.service = this.tv.addService(Service.InputSource, `Input ${i} - ${input.name}`, i);
 			input.service
-				.setCharacteristic(this.Characteristic.Identifier, i)
-				.setCharacteristic(this.Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
-				.setCharacteristic(this.Characteristic.IsConfigured, this.Characteristic.IsConfigured.CONFIGURED)
-				.setCharacteristic(this.Characteristic.InputSourceType, type);
-			this.tvService.addLinkedService(input.service);
+				.setCharacteristic(Characteristic.Identifier, i)
+				.setCharacteristic(Characteristic.ConfiguredName, `${i + 1}. ${input.name}`)
+				.setCharacteristic(Characteristic.IsConfigured, Characteristic.IsConfigured.CONFIGURED)
+				.setCharacteristic(Characteristic.InputSourceType, type);
 
 			this.inputs[i].service = input.service;
+			this.tvService.addLinkedService(input.service);
 		});
 	}
 
@@ -160,14 +156,14 @@ class ADBPlugin {
 		 * Create a speaker service to allow volume control
 		 */
 
-		this.tvSpeakerService = this.tv.addService(this.Service.TelevisionSpeaker);
+		this.tvSpeakerService = this.tv.addService(Service.TelevisionSpeaker);
 
 		this.tvSpeakerService
-			.setCharacteristic(this.Characteristic.Active, this.Characteristic.Active.ACTIVE)
-			.setCharacteristic(this.Characteristic.VolumeControlType, this.Characteristic.VolumeControlType.ABSOLUTE);
+			.setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
+			.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.ABSOLUTE);
 
 		// handle [volume control]
-		this.tvSpeakerService.getCharacteristic(this.Characteristic.VolumeSelector)
+		this.tvSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
 			.on('set', (state, callback) => {
 				var key = "";
 
@@ -186,7 +182,7 @@ class ADBPlugin {
 			});
 
 		// handle [mute control] - not implemented yet
-		this.tvSpeakerService.getCharacteristic(this.Characteristic.Mute)
+		this.tvSpeakerService.getCharacteristic(Characteristic.Mute)
 			.on('get', (callback) => {
 				this.log.debug(this.ip, 'Triggered GET Mute');
 
@@ -197,11 +193,13 @@ class ADBPlugin {
 
 				callback(null);
 			});
+
+    this.tvService.addLinkedService(this.tvSpeakerService);
 	}
 
 	handleOnOff() {
 		// handle [on / off]
-		this.tvService.getCharacteristic(this.Characteristic.Active)
+		this.tvService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
 				if(state) {
 					// When it sleep, wake it up
@@ -212,7 +210,7 @@ class ADBPlugin {
 							this.log.info(this.ip, "Awake");
 						}
 
-						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
+						this.tvService.updateCharacteristic(Characteristic.Active, state);
 						this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
@@ -224,7 +222,7 @@ class ADBPlugin {
 							this.log.info(this.ip, "Sleeping");
 						}
 
-						this.tvService.updateCharacteristic(this.Characteristic.Active, state);
+						this.tvService.updateCharacteristic(Characteristic.Active, state);
 						this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
@@ -249,7 +247,7 @@ class ADBPlugin {
 
 	handleInput() {
 		// handle [input source]
-		this.tvService.getCharacteristic(this.Characteristic.ActiveIdentifier)
+		this.tvService.getCharacteristic(Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
 				if (!this.currentAppOnProgress) {
 					let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
@@ -257,11 +255,11 @@ class ADBPlugin {
 					this.currentAppIndex = state;
 					this.currentAppOnProgress = true;
 
-					if (this.currentAppIndex != 0) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
+					if (this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
 
 					exec(adb, (err, stdout, stderr) => {
 						this.log.info(this.ip, "Switched from home app -", this.inputs[this.currentAppIndex].id);
-						setTimeout(() =>{ this.currentAppOnProgress = false; }, this.interval);
+						setTimeout(() =>{ this.currentAppOnProgress = false; }, 1000);
 					});
 				}
 
@@ -271,15 +269,15 @@ class ADBPlugin {
 
 	handleMediaStatus() {
 		// handle [media status] - not implemented yet
-		this.tvService.getCharacteristic(this.Characteristic.CurrentMediaState)
+		this.tvService.getCharacteristic(Characteristic.CurrentMediaState)
 			.on('set', (state, callback) => {
-				if(state == this.Characteristic.CurrentMediaState.PLAY)
+				if(state == Characteristic.CurrentMediaState.PLAY)
 					this.log.info(this.ip, '- Accessory is playing');
-				else if(state == this.Characteristic.CurrentMediaState.PAUSE)
+				else if(state == Characteristic.CurrentMediaState.PAUSE)
 					this.log.info(this.ip, '- Accessory is paused');
-				else if(state == this.Characteristic.CurrentMediaState.STOP)
+				else if(state == Characteristic.CurrentMediaState.STOP)
 					this.log.info(this.ip, '- Accessory is stoped');
-				else if(state == this.Characteristic.CurrentMediaState.LOADING)
+				else if(state == Characteristic.CurrentMediaState.LOADING)
 					this.log.info(this.ip, '- Accessory is loading');
 				else
 					this.log.info(this.ip, '- Accessory is interupted');
@@ -290,11 +288,11 @@ class ADBPlugin {
 
 	handleMediaStates() {
 		// handle [media state] - not implemented yet
-		this.tvService.getCharacteristic(this.Characteristic.TargetMediaState)
+		this.tvService.getCharacteristic(Characteristic.TargetMediaState)
 			.on('get', (callback) => {
-				if(state == this.Characteristic.TargetMediaState.PLAY)
+				if(state == Characteristic.TargetMediaState.PLAY)
 					this.log.info(this.ip, '- Get Media: Accessory is playing');
-				else if(state == this.Characteristic.TargetMediaState.PAUSE)
+				else if(state == Characteristic.TargetMediaState.PAUSE)
 					this.log.info(this.ip, '- Get Media: Accessory is paused');
 				else
 					this.log.info(this.ip, '- Get Media: Accessory is stoped');
@@ -302,9 +300,9 @@ class ADBPlugin {
 				callback(null);
 			})
 			.on('set', (state, callback) => {
-				if(state == this.Characteristic.TargetMediaState.PLAY)
+				if(state == Characteristic.TargetMediaState.PLAY)
 					this.log.info(this.ip, '- Set Media: Accessory is playing');
-				else if(state == this.Characteristic.TargetMediaState.PAUSE)
+				else if(state == Characteristic.TargetMediaState.PAUSE)
 					this.log.info(this.ip, '- Set Media: Accessory is paused');
 				else
 					this.log.info(this.ip, '- Set Media: Accessory is stoped');
@@ -315,60 +313,60 @@ class ADBPlugin {
 
 	handleRemoteControl() {
 		// handle [remote control]
-		this.tvService.getCharacteristic(this.Characteristic.RemoteKey)
+		this.tvService.getCharacteristic(Characteristic.RemoteKey)
 			.on('set', (state, callback) => {
 				var key = "";
 
 				switch(state) {
-					case this.Characteristic.RemoteKey.REWIND: {
+					case Characteristic.RemoteKey.REWIND: {
 						key = 'KEYCODE_MEDIA_REWIND';
 						break;
 					}
-					case this.Characteristic.RemoteKey.FAST_FORWARD: {
+					case Characteristic.RemoteKey.FAST_FORWARD: {
 						key = 'KEYCODE_MEDIA_FAST_FORWARD';
 						break;
 					}
-					case this.Characteristic.RemoteKey.NEXT_TRACK: {
+					case Characteristic.RemoteKey.NEXT_TRACK: {
 						key = 'KEYCODE_MEDIA_NEXT';
 						break;
 					}
-					case this.Characteristic.RemoteKey.PREVIOUS_TRACK: {
+					case Characteristic.RemoteKey.PREVIOUS_TRACK: {
 						key = 'KEYCODE_MEDIA_PREVIOUS';
 						break;
 					}
-					case this.Characteristic.RemoteKey.ARROW_UP: {
+					case Characteristic.RemoteKey.ARROW_UP: {
 						key = 'KEYCODE_DPAD_UP';
 						break;
 					}
-					case this.Characteristic.RemoteKey.ARROW_DOWN: {
+					case Characteristic.RemoteKey.ARROW_DOWN: {
 						key = 'KEYCODE_DPAD_DOWN';
 						break;
 					}
-					case this.Characteristic.RemoteKey.ARROW_LEFT: {
+					case Characteristic.RemoteKey.ARROW_LEFT: {
 						key = 'KEYCODE_DPAD_LEFT';
 						break;
 					}
-					case this.Characteristic.RemoteKey.ARROW_RIGHT: {
+					case Characteristic.RemoteKey.ARROW_RIGHT: {
 						key = 'KEYCODE_DPAD_RIGHT';
 						break;
 					}
-					case this.Characteristic.RemoteKey.SELECT: {
+					case Characteristic.RemoteKey.SELECT: {
 						key = 'KEYCODE_ENTER';
 						break;
 					}
-					case this.Characteristic.RemoteKey.BACK: {
+					case Characteristic.RemoteKey.BACK: {
 						key = 'KEYCODE_BACK';
 						break;
 					}
-					case this.Characteristic.RemoteKey.EXIT: {
+					case Characteristic.RemoteKey.EXIT: {
 						key = 'KEYCODE_HOME';
 						break;
 					}
-					case this.Characteristic.RemoteKey.PLAY_PAUSE: {
+					case Characteristic.RemoteKey.PLAY_PAUSE: {
 						key = 'KEYCODE_MEDIA_PLAY_PAUSE';
 						break;
 					}
-					case this.Characteristic.RemoteKey.INFORMATION: {
+					case Characteristic.RemoteKey.INFORMATION: {
 						key = 'KEYCODE_INFO';
 						break;
 					}
@@ -395,7 +393,7 @@ class ADBPlugin {
 
 				if ((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
 					this.awake = !this.awake;
-					this.tvService.getCharacteristic(this.Characteristic.Active).updateValue(this.awake);
+					this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
 				}
 			}
 		});
@@ -418,7 +416,7 @@ class ADBPlugin {
 					if (stdout[1].includes("Launcher") || stdout[1].includes("MainActivity") || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
 					else stdout = stdout[0];
 				} else {
-					stdout = "other";
+					stdout = OTHER_APP_ID;
 				}
 
 				if (err) {
@@ -453,10 +451,10 @@ class ADBPlugin {
 
 						this.currentAppIndex = this.inputs.length - 1;
 						if (this.inputs[this.currentAppIndex]) this.inputs[this.currentAppIndex].id = stdout;
-						if (this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(this.Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
+						if (this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
 					}
 
-					this.tvService.setCharacteristic(this.Characteristic.ActiveIdentifier, this.currentAppIndex);
+					this.tvService.setCharacteristic(Characteristic.ActiveIdentifier, this.currentAppIndex);
 					this.log.info(this.ip, "Switched from device -", stdout);
 				}
 
@@ -490,16 +488,16 @@ class ADBPlugin {
 	}
 
 	update(interval) {
-	  	// Update TV status every second -> or based on configuration
-	    this.intervalHandler = setInterval(() => {
-	    	this.checkPower();
-	    	if (this.awake) this.checkInput();
+  	// Update TV status every second -> or based on configuration
+    this.intervalHandler = setInterval(() => {
+    	this.checkPower();
+    	if (this.awake) this.checkInput();
 
-	    	if (this.limitRetry <= 0) {
-				this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
-	    		clearInterval(this.intervalHandler);
-	    	}
-	    }, this.interval);
+    	if (this.limitRetry <= 0) {
+			this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
+    		clearInterval(this.intervalHandler);
+    	}
+    }, this.interval);
 	}
 }
 

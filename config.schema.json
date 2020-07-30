@@ -5,58 +5,55 @@
 	"headerDisplay": "A simple homebridge script to control remote ADB enabled Android device",
 	"footerDisplay": "For more information, see the [README](https://github.com/dwaan/homebridge-adb/blob/master/README.md)",
 	"schema": {
-		"accessories": {
-			"title": "Accessories",
-			"type": "array",
-			"required": true,
-			"items": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string",
-						"title": "Name",
-						"placeholder": "Your Device Name",
-						"description": "Type your device name",
-						"type": "string",
-						"minLength": 1,
-						"required": true
-					},
-					"ip": {
-						"type": "string",
-						"title": "IP",
-						"placeholder": "192.168.0.100",
-						"description": "Type your device IP address",
-						"type": "string",
-						"format": "ipv4",
-						"required": true
-					},
-					"interval": {
-						"type": "number",
-						"placeholder": "5000",
-						"title": "Polling interval",
-						"description": "Check your device every ____ miliseconds",
-						"type": "number"
-					},
-					"inputs": {
-						"title": "Inputs",
-						"type": "array",
-						"description": "Add more inputs to your device",
-						"items": {
-							"type": "object",
-							"properties": {
-								"name": {
-									"title": "App Name",
-									"type": "string",
-									"placeholder": "Your apps name",
-									"required": true,
-									"description": "Type your app name"
-								},
-								"id": {
-									"title": "App ID",
-									"type": "string",
-									"placeholder": "com.your.app.name",
-									"required": true,
-									"description": "Check Homebridge logs for current App ID"
+	    "type": "object",
+	    "properties": {
+			"accessories": {
+				"title": "Accessories",
+				"type": "array",
+				"required": true,
+				"items": {
+					"type": "object",
+					"properties": {
+						"name": {
+							"type": "string",
+							"title": "Device Name",
+							"placeholder": "Type your device name",
+							"type": "string",
+							"minLength": 1,
+							"required": true
+						},
+						"ip": {
+							"type": "string",
+							"title": "Device IP",
+							"placeholder": "Type your device IP address",
+							"type": "string",
+							"format": "ipv4",
+							"required": true
+						},
+						"interval": {
+							"type": "number",
+							"title": "Polling interval",
+							"placeholder": "Check your device every n miliseconds",
+							"type": "number"
+						},
+						"inputs": {
+							"title": "Inputs",
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"title": "App Name",
+										"type": "string",
+										"placeholder": "Your apps name",
+										"required": true
+									},
+									"id": {
+										"title": "App ID",
+										"type": "string",
+										"placeholder": "com.your.app.id",
+										"required": true
+									}
 								}
 							}
 						}
@@ -71,11 +68,11 @@
 			"type": "array",
 			"items": [
 				{
-					"type": "div",
+					"type": "flex",
 					"displayFlex": true,
 					"items": [
 						{
-							"type": "div",
+							"type": "flex",
 							"displayFlex": true,
 							"flex-direction": "row",
 							"items": [
@@ -85,7 +82,7 @@
 							]
 						},
 						{
-							"type": "div",
+							"type": "flex",
 							"displayFlex": true,
 							"flex-direction": "row",
 							"items": [
@@ -100,14 +97,15 @@
 							]
 						},
 					    {
-					    	"type": "array",
 							"key": "accessories[].inputs",
+					    	"type": "array",
 							"expandable": true,
-							"expanded": false,
+							"expanded": true,
+							"description": "Add more inputs to your device. Check Homebridge logs for current App ID",
 							"items": [
 								{
 
-									"type": "div",
+									"type": "flex",
 									"displayFlex": true,
 									"flex-direction": "row",
 									"items": [
