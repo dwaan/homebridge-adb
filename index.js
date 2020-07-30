@@ -1,5 +1,4 @@
 let exec = require('child_process').exec;
-let os = require( 'os' );
 let Service, Characteristic, Homebridge, Accessory;
 
 const PLUGIN_NAME = 'homebridge-adb';
@@ -60,8 +59,7 @@ class ADBPlugin {
 		 */
 
 		// generate a UUID
-		const networkInterfaces = os.networkInterfaces();
-		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + networkInterfaces.en0[0].address + this.ip + this.name);
+		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name);
 
 		// create the external accessory
 		this.tv = new this.api.platformAccessory(this.name, uuid);
