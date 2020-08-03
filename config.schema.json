@@ -97,11 +97,11 @@
 							"items": [
 								{
 									"key": "accessories[].ip",
-									"flex": "1 1 50px"
+									"flex": "1 1 100px"
 								},
 								{
 									"key": "accessories[].interval",
-									"flex": "1 1 50px"
+									"flex": "1 1 100px"
 								}
 							]
 						},
@@ -120,11 +120,11 @@
 									"items": [
 										{
 											"key": "accessories[].inputs[].id",
-											"flex": "4 4 50px"
+											"flex": "4 4 100px"
 										},
 										{
 											"key": "accessories[].inputs[].name",
-											"flex": "3 3 50px"
+											"flex": "3 3 100px"
 										}
 									]
 								}

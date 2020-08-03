@@ -164,7 +164,7 @@ class ADBPlugin {
 				name = `${humanNumber}. ${input.name}`;
 			}
 
-			this.log.info(this.ip, name, targetVisibility, currentVisibility);
+			// this.log.info(this.ip, name, targetVisibility, currentVisibility);
 			let service = this.tv.addService(Service.InputSource, `Input - ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
@@ -495,26 +495,30 @@ class ADBPlugin {
 	}
 
 	connect(callback) {
-		exec(`adb disconnect ${this.ip} > /dev/null && adb connect ${this.ip}`, (err, stdout, stderr) => {
-			var connected = false;
-
+		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
 			if (!err) {
-				connected = stdout.trim();
-				connected = connected.includes("connected");
+				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					var connected = false;
+
+					if (!err) {
+						connected = stdout.trim();
+						connected = connected.includes("connected");
+					}
+
+					if (connected) {
+						this.update();
+						this.log.info(this.ip, "- Connected");
+					} else {
+						exec(`adb disconnect ${this.ip}`);
+						this.log.info(this.ip, "- Can't connect to this accessory :(");
+					}
+
+					this.log.info(this.ip, "- Connection attempt", this.limitRetry);
+					this.limitRetry--;
+
+					callback(connected);
+				});
 			}
-
-			if (connected) {
-				this.update();
-				this.log.info(this.ip, "- Connected");
-			} else {
-				exec(`adb disconnect ${this.ip}`);
-				this.log.info(this.ip, "- Can't connect to this accessory :(");
-			}
-
-			this.log.info(this.ip, "- Connection attempt", this.limitRetry);
-			this.limitRetry--;
-
-			callback(connected);
 		});
 	}
 
