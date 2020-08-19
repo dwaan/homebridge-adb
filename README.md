@@ -25,9 +25,9 @@ This plugins register it self as external accesorries, so make sure after you ad
 		```
 		sudo apt-get install android-tools-adb android-tools-fastboot
 		```
-	*  If you're using Alpine Linux (Homebridge Docker image use this), use this command:
+	*  If you're using Alpine Linux (like in the ARM version of oznu/docker-homebridge), use this command:
 		```
-		RUN apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
+		apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
 		```
 	*  For other OS and method please download it in here: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
 	*  When it properly installed, please check your ADB is up and running with this command: 
