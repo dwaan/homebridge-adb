@@ -37,31 +37,31 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 * Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* Some Android device have remote debug by default. If your device is not one of them, connect your device to your server (or any computer with ADB installed) and run:
+* Some Android device have remote debug by default. If your device is not one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run:
 	```
 	adb tcpip 5555
 	```
-	after that just disconnect your device from your computer.
+	after that just disconnect the USB cable from your computer.
 
 * Run this command to make sure you can connect to device:
 	```
 	adb connect your-device-ip
 	```
-	If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to do
+	If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to do kill the adb server to make a fresh connection
 	```
 	adb kill-server
 	```
-	and reconnect your device again. After that, you should able to run this command
+	After that reconnect your device again with previous adb connect. And after that, you should able to run this command
 	```
 	adb -s your-device-ip shell "getprop ro.product.model"
 	```
-	and get  your device model as the output.
+	and get it will output your device model.
 
 
 
 ## Configuration
 
-Here an example of configuration that you can use.
+Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small hiccup with Inputs. It only display one input, but if you press add, it will display the rest of the inputs. 
 
     "platforms": [
         {
@@ -131,7 +131,7 @@ Here an example of configuration that you can use.
 	```
 * Running an app using their package name
 	```
-	adb -s your-device-ip shell "monkey -p package.name 1
+	adb -s your-device-ip shell "monkey -p package.name 1"
 	```
 * To know current on screen app
 	```
