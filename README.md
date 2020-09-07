@@ -121,19 +121,19 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	```
 	adb -s your-device-ip "getprop ro.serialno"
 	```
-* To run "keyboard" command like up, down, sleep, awake, volume control, etc
+* Send "keyboard" command like up, down, sleep, awake, volume control, etc
 	```
 	adb -s your-device-ip shell "input keyevent KEYCODE"
 	```
-* To know device sleep status based on whether secreen is turned on or off
+* Check device sleep status based on whether secreen is turned on or off
 	```
 	adb shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
 	```
-* Running an app using their package name
+* Start an app using their package name
 	```
 	adb -s your-device-ip shell "monkey -p package.name 1"
 	```
-* To know current on screen app
+* Check the current on screen app (Useful for configuring inputs for the plugin config.
 	```
 	adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"
 	```
