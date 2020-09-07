@@ -6,9 +6,9 @@
 
 # Homebridge ADB
 
-A simple homebridge script to control remote ADB enabled Android device. The idea is to have a make random Android based TV box can be controlled with Home App. It make your Android device appear as TV accesory, where you can control sleep status, volume and dpad control via remote, and launch certain predefined app defined by you.
+A simple homebridge script to control remote ADB enabled Android device. The idea is to control Android based TV boxes via the Home App. The plugin will make your Android device appear as TV accesory, where you can control volume, dpad, sleep volue and launch apps.
 
-This plugins register it self as external accesorries, so make sure after you add your Homebridge bridge to your Home App, manually add accesories to add the device you want to control via Home App
+This plugin register as an external accesorrie, so make sure after you add your Homebridge bridge to your Home App. Manually add accesories to add the device you want to control via Home App
 
 |![](img/IMG_7295.jpg)|![](img/IMG_7296.jpg)|![](img/IMG_7297.jpg)|![](img/IMG_7298.jpg)|
 |----------|----------|----------|----------|
@@ -37,8 +37,8 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 * Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* Some Android device have remote debug by default. If your device is not one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run:
-	```
+* If your device does not have remote ADB enabled by default, connect your device with USB cable to your server (or any computer with ADB installed) and run:
+	``
 	adb tcpip 5555
 	```
 	after that just disconnect the USB cable from your computer.
@@ -47,7 +47,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 	```
 	adb connect your-device-ip
 	```
-	If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to do kill the adb server to make a fresh connection
+	If all goes well, there will be a popup window in your android device asking for debug permission. After you accept the request, you might want to kill the adb server to make a fresh connection
 	```
 	adb kill-server
 	```
@@ -61,7 +61,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 ## Configuration
 
-Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small hiccup with Inputs. It only display one input, but if you press add, it will display the rest of the inputs. 
+Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small bug with Input selection screen. It only displays one input, but if you press add, it will display the rest of the inputs. 
 
     "platforms": [
         {
@@ -104,7 +104,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
 * *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
-* *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous App shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
+* *inputs* (optional): by default the plugin will create Home and Other. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
 
 
 ## ADB command that this script use
