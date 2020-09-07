@@ -6,7 +6,7 @@
 
 # Homebridge ADB
 
-A simple homebridge script to control remote ADB enabled Android device. The idea is to control Android based TV boxes via the Home App. The plugin will make your Android device appear as TV accesory, where you can control volume, dpad, sleep volue and launch apps.
+A simple homebridge script to control remote ADB enabled Android device. The idea is to control Android based TV boxes via iOS HomeKit and Home App. The plugin will make your Android device appear as TV accesory, where you can control volume, dpad, sleep, volue and launch apps.
 
 This plugin register as an external accesorrie, so make sure after you add your Homebridge bridge to your Home App. Manually add accesories to add the device you want to control via Home App
 
