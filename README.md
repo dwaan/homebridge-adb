@@ -133,7 +133,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	```
 	adb -s your-device-ip shell "monkey -p package.name 1"
 	```
-* Check the current on screen app (Useful for configuring inputs for the plugin config.
+* Check the current on screen app (Useful for configuring inputs for the plugin config).
 	```
 	adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"
 	```
