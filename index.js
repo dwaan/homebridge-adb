@@ -4,8 +4,8 @@ let Service, Characteristic, Homebridge, Accessory;
 const PLUGIN_NAME = 'homebridge-adb';
 const PLATFORM_NAME = 'HomebridgeADB';
 const SLEEP_COMMAND = `dumpsys power | grep mHoldingDisplay | cut -d = -f 2`;
-const NO_STATUS = "Can't communicate to device, please check your ADB connection manually";
-const LIMIT_RETRY = 5;
+const NO_STATUS = "No response, please check your ADB connection";
+const LIMIT_RETRY = 3;
 
 const OTHER_APP_ID = "other";
 const HOME_APP_ID = "home";
@@ -29,15 +29,16 @@ class ADBPlugin {
 		this.config = config;
 		this.api = api;
 
-    // Configuration
+	    // Configuration
 		// Name
 		this.name = this.config.name || 'Android Device';
 		// IP
 		this.ip = this.config.ip;
 		if (!this.ip) {
-		    this.log.info(`Please provide IP for this accessory: ${this.name}`);
+	    this.log.info(`Please provide IP for this accessory: ${this.name}`);
 			return;
 		}
+    this.log.info(`Creating: ${this.name}`);
 		// Interval
 		this.interval = this.config.interval || 5000;
 		// Can't be lower than 300 miliseconds, it will flood your network
@@ -102,11 +103,13 @@ class ADBPlugin {
 			this.connected = connected;
 
 			if (this.connected) {
-				// get the acceory information and send it to HB
+				// get the accesory information and send it to HB
 				exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout, stderr) => {
 					if (err) {
-						this.log.info(this.ip, "- Can't get accessory information");
-						this.log.info(this.ip, "- Please check you ADB connection to this accessory, manually");
+						this.log.info("--------------------------------------------------------------");
+						this.log.info(this.ip, "- Can't get information from", this.name);
+						this.log.info(this.ip, "- Please check you ADB connection");
+						this.log.info("--------------------------------------------------------------");
 					} else {
 						stdout = stdout.split("\n");
 
@@ -119,8 +122,6 @@ class ADBPlugin {
 						this.api.publishExternalAccessories(PLUGIN_NAME, [this.tv]);
 					}
 				});
-			} else {
-				this.log.info(this.ip, "- Please check you ADB connection to this accessory, manually");
 			}
 		});
 	}
@@ -242,7 +243,7 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(Characteristic.Active, state);
-						this.limitRetry = LIMIT_RETRY;
+						// this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
 				} else {
@@ -254,25 +255,26 @@ class ADBPlugin {
 						}
 
 						this.tvService.updateCharacteristic(Characteristic.Active, state);
-						this.limitRetry = LIMIT_RETRY;
+						// this.limitRetry = LIMIT_RETRY;
 						callback(null);
 					});
 				}
 			}).on('get', (callback) => {
-				exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
-					if (err) {
-						this.log.info(this.ip, `Can't switch power state of the accessory`, NO_STATUS);
-					} else {
-						var output = stdout.trim();
+				// this.log.info(this.ip, "- Power change");
 
-						this.awake = false;
-						if (output == 'true') this.awake = true;
+				// exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
+				// 	this.awake = false;
 
-						this.log.info(this.ip, "Power on: " + this.awake);
-				  }
+				// 	if (err) {
+				// 		this.log.info(this.ip, `- Can't switch power state of the accessory`);
+				// 		this.log.info(this.ip, "-", NO_STATUS);
+				// 	} else {
+				// 		var output = stdout.trim();
+				// 		if (output == 'true') this.awake = true;
+				//   }
 
-			    callback(null, this.awake);
-				});
+				// callback(null, this.awake);
+				// });
 			});
 	}
 
@@ -289,7 +291,7 @@ class ADBPlugin {
 					if (this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
 
 					exec(adb, (err, stdout, stderr) => {
-						this.log.info(this.ip, "Switched from home app -", this.inputs[this.currentAppIndex].id);
+						this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
 						setTimeout(() =>{ this.currentAppOnProgress = false; }, 1000);
 					});
 				}
@@ -416,18 +418,37 @@ class ADBPlugin {
 	}
 
 	checkPower() {
-		exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
-			if (err) {
-				this.log.info(this.ip, `No power state from the accessory`, NO_STATUS);
-			} else {
-				var output = stdout.trim();
+		if (this.connected) {
+			this.connected = false;
 
-				if ((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
-					this.awake = !this.awake;
-					this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+			exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
+				if (!err) {
+					var output = stdout.trim();
+					this.connected = true;
+
+					if ((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
+						this.awake = !this.awake;
+						this.log.info(this.ip, "-", this.name, "power is", this.awake);
+						this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+					}
 				}
+			});
+		} else {
+			if (this.limitRetry == LIMIT_RETRY) {
+				this.awake = false;
+				this.log.info(this.ip, "-", NO_STATUS);
+				this.log.info(this.ip, "-", this.name, "power is set to", this.awake);
+				this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
 			}
-		});
+
+			// Wait before reconnecting
+			this.limitRetry--;
+			if (this.limitRetry < 0) {
+				this.log.info(this.ip, "-", "Retrying to connect");
+				this.limitRetry = LIMIT_RETRY;
+				this.connected = true;
+			}
+		}
 	}
 
 	checkInput(error, value, appId) {
@@ -450,9 +471,7 @@ class ADBPlugin {
 					stdout = OTHER_APP_ID;
 				}
 
-				if (err) {
-					this.log.info(this.ip, `No inputs states from the accessory`, NO_STATUS);
-				} else if (this.inputs[this.currentAppIndex].id != stdout) {
+				if (!err && this.inputs[this.currentAppIndex].id != stdout) {
 					this.inputs.forEach((input, i) => {
 						// Home or registered app
 						if (stdout == input.id) {
@@ -486,7 +505,7 @@ class ADBPlugin {
 					}
 
 					this.tvService.setCharacteristic(Characteristic.ActiveIdentifier, this.currentAppIndex);
-					this.log.info(this.ip, "Switched from device -", stdout);
+					this.log.info(this.ip, "- Switched from device -", stdout);
 				}
 
 				this.currentAppOnProgress = false;
@@ -495,30 +514,36 @@ class ADBPlugin {
 	}
 
 	connect(callback) {
+		var deviceReady = false;
+		var error = function() {
+			this.log.info("--------------------------------------------------------------");
+			this.log.info(this.ip, "- Can't connect to", this.name);
+			this.log.info(this.ip, "- Please check you ADB connection");
+			this.log.info("--------------------------------------------------------------");
+		}
+
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
-			if (!err) {
-				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-					var connected = false;
+			exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+				var connected = false;
 
-					if (!err) {
-						connected = stdout.trim();
-						connected = connected.includes("connected");
-					}
+				if (!err) {
+					connected = stdout.trim();
+					connected = connected.includes("connected");
+				}
 
-					if (connected) {
-						this.update();
-						this.log.info(this.ip, "- Connected");
-					} else {
-						exec(`adb disconnect ${this.ip}`);
-						this.log.info(this.ip, "- Can't connect to this accessory :(");
-					}
+				if (connected) {
+					this.update();
+					this.log.info(this.ip, "- Connected");
 
-					this.log.info(this.ip, "- Connection attempt", this.limitRetry);
-					this.limitRetry--;
+					// this.log.info(this.ip, "- Connection attempt", this.limitRetry);
+					// this.limitRetry--;
+					deviceReady = true;
 
 					callback(connected);
-				});
-			}
+				} else {
+					error();
+				}
+			});
 		});
 	}
 
@@ -528,10 +553,10 @@ class ADBPlugin {
     	this.checkPower();
     	if (this.awake) this.checkInput();
 
-    	if (this.limitRetry <= 0) {
-			this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
-    		clearInterval(this.intervalHandler);
-    	}
+			// if (this.limitRetry <= 0) {
+			// 	this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
+			// 	clearInterval(this.intervalHandler);
+			// }
     }, this.interval);
 	}
 }
@@ -562,7 +587,7 @@ class ADBPluginPlatform {
 		if (!this.config.accessories) {
 			this.log.info('-------------------------------------------------');
 			this.log.info('Please add one or more accessories in your config');
-			this.log.info('------------------------------------------------');
+			this.log.info('-------------------------------------------------');
 		}
 	}
 }

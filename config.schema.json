@@ -110,10 +110,9 @@
 					    	"type": "array",
 							"expandable": true,
 							"expanded": false,
-							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID",
+							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID.",
 							"items": [
 								{
-
 									"type": "flex",
 									"displayFlex": true,
 									"flex-direction": "row",

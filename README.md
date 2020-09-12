@@ -15,7 +15,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 ## Prerequisite
 
-* Install Homebridge (and Homebridge UI X if you want) and this plugins
+* Install Homebridge (and Homebridge UI X if you want, this plugin support web configuration over there) and this plugins
 	```
 	sudo npm install -g --unsafe-perm homebridge homebridge-adb
 	```
@@ -25,7 +25,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 		```
 		sudo apt-get install android-tools-adb android-tools-fastboot
 		```
-	*  If you're using Alpine Linux (like in the ARM version of oznu/docker-homebridge), use this command:
+	*  If you're using Alpine Linux (like the one from of oznu/docker-homebridge), use this command:
 		```
 		apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
 		```
@@ -37,13 +37,13 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 * Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* Some Android device have remote debug by default. If your device is not one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run:
+* Some Android device doesn't have remote debug by default. If your device is one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run this command:
 	```
 	adb tcpip 5555
 	```
-	after that just disconnect the USB cable from your computer.
+	after that, just disconnect the USB cable from your server.
 
-* Run this command to make sure you can connect to device:
+* Optionally, run this command to make sure you can connect to device:
 	```
 	adb connect your-device-ip
 	```
@@ -61,7 +61,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 
 ## Configuration
 
-Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small hiccup with Inputs. It only display one input, but if you press add, it will display the rest of the inputs. 
+Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small hiccup with Inputs. It only display one input, but if you press add, it will display the rest of the inputs.
 
     "platforms": [
         {
@@ -104,7 +104,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
 * *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
-* *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous App shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
+* *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
 
 
 ## ADB command that this script use
@@ -141,6 +141,10 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 
 ## FAQ
 
+* Where can I use volume and D-Pad control for my device?
+	* First turn on "Apple TV Remote" control from your iOS device inside Settings -> Control Center. Then swipe down Control Center, you'll see a remote icon. Tap the remote icon to open the remote, you can use your iOS device screen for the D-Pad, and use your iOS device physical volume button to control your device volume.
+* Why I can't turn on my device after turning it off?
+	* Your device, might cut off network connection after you turn off your device. You need to turn it on manually. Or, please make sure your device still able recieve network connection when it turned off. Check your device settings for it.
 * Is this safe?
 	* Actually I don't know, it feels very dirty (I need to wash my hand everytime I use this) and hacky, but it works for me.
 * I found some bugs, what should I do?
