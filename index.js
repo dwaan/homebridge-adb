@@ -262,19 +262,19 @@ class ADBPlugin {
 			}).on('get', (callback) => {
 				// this.log.info(this.ip, "- Power change");
 
-				// exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
-				// 	this.awake = false;
+				exec(`adb -s ${this.ip} shell "${SLEEP_COMMAND}"`, (err, stdout, stderr) => {
+					this.awake = false;
 
-				// 	if (err) {
-				// 		this.log.info(this.ip, `- Can't switch power state of the accessory`);
-				// 		this.log.info(this.ip, "-", NO_STATUS);
-				// 	} else {
-				// 		var output = stdout.trim();
-				// 		if (output == 'true') this.awake = true;
-				//   }
+					if (err) {
+						this.log.info(this.ip, `- Can't switch power state of the accessory`);
+						this.log.info(this.ip, "-", NO_STATUS);
+					} else {
+						var output = stdout.trim();
+						if (output == 'true') this.awake = true;
+				}
 
-				// callback(null, this.awake);
-				// });
+				callback(null, this.awake);
+				});
 			});
 	}
 
