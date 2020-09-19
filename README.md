@@ -35,7 +35,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 		adb version
 		```
 
-* Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
+* Enable Developer mode in your Android device, visit this documentation to read more  [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
 * Some Android device doesn't have remote debug by default. If your device is one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run this command:
 	```
@@ -71,6 +71,9 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "name": "NVIDIA Shield",
                     "interval": 1000,
                     "ip": "192.168.1.106",
+                    "playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
+                    "backbutton": "KEYCODE_BACK",
+                    "infobutton": "KEYCODE_HOME",
                     "inputs": [
                         {
                             "name": "HBO Now",
@@ -104,6 +107,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
 * *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
+* *infobutton*, *playpauseobutton*, *backbutton* (optional): assign custom key event code for Remote control in iOS Control Center, see [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the key codes.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
 
 

@@ -45,6 +45,30 @@
 								{ "title": "10000", "enum": ["10000"] }
 					        ]
 						},
+						"backbutton": {
+							"type": "string",
+							"title": "Back Button",
+							"placeholder": "Type your custom 'back' key code",
+							"type": "string",
+							"minLength": 9,
+							"default": "KEYCODE_BACK"
+						},
+						"playpausebutton": {
+							"type": "string",
+							"title": "Play/Pause Button",
+							"placeholder": "Type your custom 'play/pause' key code",
+							"type": "string",
+							"minLength": 9,
+							"default": "KEYCODE_MEDIA_PLAY_PAUSE"
+						},
+						"infobutton": {
+							"type": "string",
+							"title": "Info Button",
+							"placeholder": "Type your custom 'info' key code",
+							"type": "string",
+							"minLength": 9,
+							"default": "KEYCODE_HOME"
+						},
 						"inputs": {
 							"title": "Inputs",
 							"type": "array",
@@ -102,6 +126,44 @@
 								{
 									"key": "accessories[].interval",
 									"flex": "1 1 100px"
+								}
+							]
+						},
+						{
+							"title": "Control Center Remote",
+							"expandable": true,
+							"expanded": false,
+							"description": "For list of Key Event code visit: https://developer.android.com/reference/android/view/KeyEvent",
+							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].playpausebutton"
+										}
+									]
+								},
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].backbutton"
+										}
+									]
+								},
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].infobutton"
+										}
+									]
 								}
 							]
 						},

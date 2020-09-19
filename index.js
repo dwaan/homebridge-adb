@@ -11,10 +11,10 @@ const OTHER_APP_ID = "other";
 const HOME_APP_ID = "home";
 
 module.exports = (homebridge) => {
-  Service = homebridge.hap.Service;
-  Characteristic = homebridge.hap.Characteristic;
-  Homebridge = homebridge;
-  Accessory = homebridge.platformAccessory;
+	Service = homebridge.hap.Service;
+	Characteristic = homebridge.hap.Characteristic;
+	Homebridge = homebridge;
+	Accessory = homebridge.platformAccessory;
 	homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, ADBPluginPlatform, true);
 };
 
@@ -29,16 +29,16 @@ class ADBPlugin {
 		this.config = config;
 		this.api = api;
 
-	    // Configuration
+		// Configuration
 		// Name
 		this.name = this.config.name || 'Android Device';
 		// IP
 		this.ip = this.config.ip;
 		if (!this.ip) {
-	    this.log.info(`Please provide IP for this accessory: ${this.name}`);
+			this.log.info(`Please provide IP for this accessory: ${this.name}`);
 			return;
 		}
-    this.log.info(`Creating: ${this.name}`);
+		this.log.info(`Creating: ${this.name}`);
 		// Interval
 		this.interval = this.config.interval || 5000;
 		// Can't be lower than 300 miliseconds, it will flood your network
@@ -81,8 +81,8 @@ class ADBPlugin {
 			.setCharacteristic(Characteristic.ConfiguredName, this.name)
 			.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
-    // Handle input
-    this.handleOnOff();
+		// Handle input
+		this.handleOnOff();
 		this.handleInput();
 		this.handleMediaStatus();
 		this.handleMediaStates();
@@ -91,8 +91,8 @@ class ADBPlugin {
 
 
 		// Create additional services
-    this.createInputs();
-    this.createSpeakers();
+		this.createInputs();
+		this.createSpeakers();
 
 		/**
 		 * Publish as external accessory
@@ -113,10 +113,10 @@ class ADBPlugin {
 					} else {
 						stdout = stdout.split("\n");
 
-				    this.tvInfo
-				    	.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
-				    	.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
-				    	.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
+						this.tvInfo
+							.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
+							.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
+							.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 
 						// Publish the accessories
 						this.api.publishExternalAccessories(PLUGIN_NAME, [this.tv]);
@@ -226,7 +226,7 @@ class ADBPlugin {
 				callback(null);
 			});
 
-	    this.tvService.addLinkedService(this.tvSpeakerService);
+			this.tvService.addLinkedService(this.tvSpeakerService);
 	}
 
 	handleOnOff() {
@@ -388,7 +388,8 @@ class ADBPlugin {
 						break;
 					}
 					case Characteristic.RemoteKey.BACK: {
-						key = 'KEYCODE_BACK';
+						if (this.config.backbutton) key = this.config.backbutton;
+						else key = 'KEYCODE_BACK';
 						break;
 					}
 					case Characteristic.RemoteKey.EXIT: {
@@ -396,20 +397,20 @@ class ADBPlugin {
 						break;
 					}
 					case Characteristic.RemoteKey.PLAY_PAUSE: {
-						key = 'KEYCODE_MEDIA_PLAY_PAUSE';
+						if (this.config.playpausebutton) key = this.config.playpausebutton;
+						else key = 'KEYCODE_MEDIA_PLAY_PAUSE';
 						break;
 					}
 					case Characteristic.RemoteKey.INFORMATION: {
-						key = 'KEYCODE_INFO';
+						if (this.config.infobutton) key = this.config.infobutton;
+						else key = 'KEYCODE_INFO';
 						break;
 					}
 				}
 
 				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
 					if (err) {
-						this.log.info(this.ip, '- Can\'t send: ' + key);
-					} else {
-						this.log.info(this.ip, '- Sending: ' + key);
+						this.log.error(this.ip, '- Can\'t send: ' + key);
 					}
 
 					callback(null);
@@ -516,11 +517,9 @@ class ADBPlugin {
 
 	connect(callback) {
 		var deviceReady = false;
+		var that = this;
 		var error = function() {
-			this.log.info("--------------------------------------------------------------");
-			this.log.info(this.ip, "- Can't connect to", this.name);
-			this.log.info(this.ip, "- Please check you ADB connection");
-			this.log.info("--------------------------------------------------------------");
+			that.log.error(`\n\nCan't connect to "${that.name}",\nwith IP address: ${that.ip}.\nPlease check you ADB connection,\nor make sure your device is on\nand connected to the same network.\n`);
 		}
 
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
@@ -549,16 +548,16 @@ class ADBPlugin {
 	}
 
 	update(interval) {
-  	// Update TV status every second -> or based on configuration
-    this.intervalHandler = setInterval(() => {
-    	this.checkPower();
-    	if (this.awake) this.checkInput();
+		// Update TV status every second -> or based on configuration
+		this.intervalHandler = setInterval(() => {
+			this.checkPower();
+			if (this.awake) this.checkInput();
 
 			// if (this.limitRetry <= 0) {
 			// 	this.log.info(this.ip, "- We didn't hear any news from this accessory, saying good bye. Disconnected");
 			// 	clearInterval(this.intervalHandler);
 			// }
-    }, this.interval);
+		}, this.interval);
 	}
 }
 
