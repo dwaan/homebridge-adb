@@ -10,7 +10,7 @@ A simple homebridge script to control remote ADB enabled Android device. The ide
 
 This plugins register it self as external accesorries, so make sure after you add your Homebridge bridge to your Home App, manually add accesories to add the device you want to control via Home App
 
-|![](img/IMG_7295.jpg)|![](img/IMG_7296.jpg)|![](img/IMG_7297.jpg)|![](img/IMG_7298.jpg)|
+|![](img/IMG_7775.jpg)|![](img/IMG_7776.jpg)|![](img/IMG_7777.jpg)|![](img/IMG_7778.jpg)|
 |----------|----------|----------|----------|
 
 ## Prerequisite
@@ -43,7 +43,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 	```
 	after that, just disconnect the USB cable from your server.
 
-* Optionally, run this command to make sure you can connect to device:
+* _Optionally_, run this command to make sure you can connect to device:
 	```
 	adb connect your-device-ip
 	```
@@ -148,7 +148,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * Where can I use volume and D-Pad control for my device?
 	* First turn on "Apple TV Remote" control from your iOS device inside Settings -> Control Center. Then swipe down Control Center, you'll see a remote icon. Tap the remote icon to open the remote, you can use your iOS device screen for the D-Pad, and use your iOS device physical volume button to control your device volume.
 * Why I can't turn on my device after turning it off?
-	* Your device, might cut off network connection after you turn off your device. You need to turn it on manually. Or, please make sure your device still able recieve network connection when it turned off. Check your device settings for it.
+	* Your device might disconnected from network connection after you turn off your device. You need to turn it on manually. Or, please make sure your device still able to recieve network connection when it turned off, check your device settings for it.
 * Is this safe?
 	* Actually I don't know, it feels very dirty (I need to wash my hand everytime I use this) and hacky, but it works for me.
 * I found some bugs, what should I do?
