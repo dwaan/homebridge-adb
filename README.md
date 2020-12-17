@@ -153,7 +153,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	* Actually I don't know, it feels very dirty (I need to wash my hand everytime I use this) and hacky, but it works for me.
 * I found some bugs, what should I do?
 	* You can submit your bugs here [https://github.com/dwaan/homebridge-adb/issues](https://github.com/dwaan/homebridge-adb/issues) or you can help me to fix it by sending pull request.
-* Can this plugins do (insert stuff you want to do) to my device?
+* Can this plugins do (insert stuff you want to do to your device)?
 	* I think so, ADB can basically control your device remotely. If you have other idea for what this can do, you can submit your idea as an issue.
 * Can I buy you a beer?
-	* No, I don't drink alcohol. But if you like this plugins feel free to stared this repo.
+	* No, [but you can buy me an Ice cream](https://www.buymeacoffee.com/dwaan). But if you like this plugins feel free to stared this repo.
