@@ -57,7 +57,31 @@ This plugins register it self as external accesorries, so make sure after you ad
 	```
 	and get it will output your device model.
 
+## Docker container based upon [oznu/docker-homebridge](https://github.com/oznu/docker-homebridge)
 
+* Append the followings line to your `config/startup.sh` to install this plugin on every container restart:
+	```shell
+	# Install the homebridge-adb plugin
+	npm install homebridge-adb
+	```
+	
+* If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), append this line to your `config/startup.sh` to install adb automatically
+	```shell
+	# Install adb, required by the homebridge-adb plugin
+	apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
+	```
+
+* If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), append this line to your `config/startup.sh` to install adb automatically
+	```shell
+	# Install adb, required by the homebridge-adb plugin
+	apt-get install -y android-tools-adb android-tools-fastboot
+	```
+
+* _Optionally_, if you run into issues when connecting to your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
+	```shell
+	# Fix connection issues for the homebridge-adb plugin
+	adb connect $YOUR_ANDROID_DEVICE_IP
+	```
 
 ## Configuration
 
