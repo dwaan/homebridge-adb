@@ -64,7 +64,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 	# Install the homebridge-adb plugin
 	npm install homebridge-adb
 	```
-	
+
 * If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), append this line to your `config/startup.sh` to install adb automatically
 	```shell
 	# Install adb, required by the homebridge-adb plugin
@@ -75,7 +75,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 	```shell
 	# Update apt package index
 	apt-get update
-	
+
 	# Install adb, required by the homebridge-adb plugin
 	apt-get install -y android-tools-adb android-tools-fastboot
 	```
@@ -158,7 +158,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	```
 * To know device sleep status based on whether secreen is turned on or off
 	```
-	adb shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
+	adb -s your-device-ip shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
 	```
 * Running an app using their package name
 	```
