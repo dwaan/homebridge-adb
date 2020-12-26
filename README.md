@@ -71,8 +71,11 @@ This plugins register it self as external accesorries, so make sure after you ad
 	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ add android-tools
 	```
 
-* If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), append this line to your `config/startup.sh` to install adb automatically
+* If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), append the following lines to your `config/startup.sh` to install adb automatically
 	```shell
+	# Update apt package index
+	apt-get update
+	
 	# Install adb, required by the homebridge-adb plugin
 	apt-get install -y android-tools-adb android-tools-fastboot
 	```
