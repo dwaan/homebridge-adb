@@ -3,7 +3,6 @@ let Service, Characteristic, Homebridge, Accessory;
 
 const PLUGIN_NAME 	= 'homebridge-adb';
 const PLATFORM_NAME = 'HomebridgeADB';
-const NO_STATUS 	= "No response, please check your ADB connection";
 const LIMIT_RETRY 	= 5;
 
 const OTHER_APP_ID = "other";
@@ -20,9 +19,7 @@ module.exports = (homebridge) => {
 
 class ADBPlugin {
 	constructor(log, config, api) {
-		if (!config) {
-			return;
-		}
+		if (!config) return;
 
 		this.log = log;
 		this.config = config;
@@ -34,7 +31,7 @@ class ADBPlugin {
 		// IP
 		this.ip = this.config.ip;
 		if (!this.ip) {
-			this.log.info(`Please provide IP for this accessory: ${this.name}`);
+			this.log.error("\n\nPlease provide IP for this accessory: ${this.name}\n\n");
 			return;
 		}
 		this.log.info(`Creating: ${this.name}`);
@@ -45,15 +42,14 @@ class ADBPlugin {
 		// Inputs
 		this.inputs = this.config.inputs;
 		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
-		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
+		this.inputs.unshift({ "name": "Home", "id": this.config.homelabel || HOME_APP_ID });
+		this.inputs.push({ "name": "Other", "id": this.config.otherlabel || OTHER_APP_ID });
 
 		// Variable
 		this.awake = false;
 		this.currentAppIndex = 0;
 		this.currentAppOnProgress = false;
 		this.checkPowerOnProgress = false;
-		this.connected = false;
 		this.limit_retry = LIMIT_RETRY;
 
 
@@ -99,19 +95,18 @@ class ADBPlugin {
 		 */
 
 		this.connect(() => {
+			var adbCommand = `adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`;
 			// get the accesory information and send it to HB
-			exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout, stderr) => {
+			exec(adbCommand, (err, stdout, stderr) => {
 				if (err) {
-					this.log.info("------");
-					this.log.info("Can't get information from", this.name);
+					this.log.info("\n\nCan't get information from", this.name);
 					this.log.info("This shouldn't be a problem, but please report this output.");
 					this.log.info("1. When running this command");
-					this.log.info(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`);
+					this.log.info(adbCommand);
 					this.log.info("2. Output:");
 					this.log.info(stdout);
 					this.log.info("3. Error output:");
-					this.log.info(stderr);
-					this.log.info("------");
+					this.log.info(stderr, "\n\n");
 				}
 
 				stdout = stdout.split("\n");
@@ -262,14 +257,7 @@ class ADBPlugin {
 					});
 				}
 			}).on('get', (callback) => {
-				this.dumpsys((err, stdout, stderr) => {
-					this.awake = false;
-
-					if (!err) {
-						var output = stdout.trim();
-						if (output == 'true') this.awake = true;
-					}
-
+				this.checkPower(() => {
 					callback(null, this.awake);
 				});
 			});
@@ -416,17 +404,15 @@ class ADBPlugin {
 	}
 
 	checkPower(callback) {
-		if (this.connected) {
-			this.connected = false;
+		if (!this.checkPowerOnProgress) {
+			this.checkPowerOnProgress = true;
 
 			this.dumpsys((err, stdout, stderr) => {
 				if (!err) {
 					var output = stdout.trim();
-					this.connected = true;
 
 					if ((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
 						this.awake = !this.awake;
-						this.log.info(this.ip, "-", this.name, "power is", this.awake);
 						this.tvService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
 					}
 
@@ -434,9 +420,9 @@ class ADBPlugin {
 				} else {
 					if(callback) callback('error');
 				}
+
+				this.checkPowerOnProgress = false;
 			});
-		} else {
-			this.log.info(this.ip, "-", "Can't connect to this device");
 		}
 	}
 
@@ -520,54 +506,46 @@ class ADBPlugin {
 
 				if (connected) {
 					this.log.info(this.ip, "- Connected");
-					this.connected = true;
 					callback();
 				} else {
 					this.log.info(this.ip, "- Disconnected");
-					this.connected = false;
 					error();
 				}
 			});
 		});
 	}
 
-	update(interval) {
+	update() {
 		var that = this;
 
 		// Update TV status every second -> or based on configuration
 		this.intervalHandler = setInterval(() => {
-			if(!that.checkPowerOnProgress){
-				that.checkPowerOnProgress = true;
-
-				that.checkPower(function(result) {
-					if (result == 'error') {
-						that.connect();
-					} else {
-						that.checkPowerOnProgress = false;
-						if (that.awake) that.checkInput();
-					}
-				});
-			}
+			that.checkPower(function(result) {
+				if (result == 'error') {
+					that.connect();
+				} else {
+					if (that.awake) that.checkInput();
+				}
+			});
 		}, this.interval);
 	}
 
 	dumpsys(callback) {
-		exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout, stderr) => {
+		var adbCommand = `adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`;
+		exec(adbCommand, (err, stdout, stderr) => {
 			if(err) {
 				this.limit_retry--;
-				that.log.info(that.ip, "- Reconnecting");
+				this.log.info(this.ip, "- Reconnecting");
 
 				if(this.limit_retry <= 0) {
-					this.log.error("------");
-					this.log.error("Problem when getting device power status.");
+					this.log.error("\n\nProblem when getting device power status.");
 					this.log.error("If your network works fine, please report this output.");
 					this.log.error("1. When running this command");
-					this.log.error(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`);
+					this.log.error(adbCommand);
 					this.log.error("2. Output:");
 					this.log.error(stdout);
 					this.log.error("3. Error output:");
-					this.log.error(stderr);
-					this.log.error("------");
+					this.log.error(stderr, "\n\n");
 					clearInterval(this.intervalHandler);
 				}
 			} else {
