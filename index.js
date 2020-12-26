@@ -42,8 +42,8 @@ class ADBPlugin {
 		// Inputs
 		this.inputs = this.config.inputs;
 		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": this.config.homelabel || HOME_APP_ID });
-		this.inputs.push({ "name": "Other", "id": this.config.otherlabel || OTHER_APP_ID });
+		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
+		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 
 		// Variable
 		this.awake = false;
@@ -203,9 +203,7 @@ class ADBPlugin {
 
 				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
 					if (err) {
-						this.log.info(this.ip, '- Can\'t set volume: ' + key);
-					} else {
-						this.log.info(this.ip, '- Sending: ' + key);
+						this.log.info(this.ip, '- Can\'t set volume');
 					}
 				});
 
@@ -215,13 +213,9 @@ class ADBPlugin {
 		// handle [mute control] - not implemented yet
 		this.tvSpeakerService.getCharacteristic(Characteristic.Mute)
 			.on('get', (callback) => {
-				this.log.debug(this.ip, 'Triggered GET Mute');
-
 				callback(null);
 			})
 			.on('set', (state, callback) => {
-				this.log.debug(this.ip, 'Triggered SET Mute:' + state);
-
 				callback(null);
 			});
 
@@ -232,31 +226,34 @@ class ADBPlugin {
 		// handle [on / off]
 		this.tvService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				if(state) {
-					// When it sleep, wake it up
-					exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
-						if (err) {
-							this.log.info(this.ip, "Can't make accessory wakeup");
-						} else {
-							this.log.info(this.ip, "Awake");
-						}
+				this.connect(() => {
+					if(state) {
+						// When it sleep, wake it up
+						exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
+							if (err) {
+								this.log.info(this.ip, "- Can't make device wakeup");
+							} else {
+								this.log.info(this.ip, "- Awake");
+							}
 
-						this.tvService.updateCharacteristic(Characteristic.Active, state);
-						callback(null);
-					});
-				} else {
-					exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
-						if (err) {
-							this.log.info(this.ip, "Can't make accessory sleep");
-						} else {
-							this.log.info(this.ip, "Sleeping");
-						}
+							this.tvService.updateCharacteristic(Characteristic.Active, state);
+							callback(null);
+						});
+					} else {
+						exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
+							if (err) {
+								this.log.info(this.ip, "- Can't make device sleep");
+							} else {
+								this.log.info(this.ip, "- Sleeping");
+							}
 
-						this.tvService.updateCharacteristic(Characteristic.Active, state);
-						callback(null);
-					});
-				}
+							this.tvService.updateCharacteristic(Characteristic.Active, state);
+							callback(null);
+						});
+					}
+				});
 			}).on('get', (callback) => {
+				this.checkPowerOnProgress = false;
 				this.checkPower(() => {
 					callback(null, this.awake);
 				});
@@ -505,10 +502,8 @@ class ADBPlugin {
 				}
 
 				if (connected) {
-					this.log.info(this.ip, "- Connected");
 					callback();
 				} else {
-					this.log.info(this.ip, "- Disconnected");
 					error();
 				}
 			});
