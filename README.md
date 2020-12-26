@@ -27,7 +27,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 		```
 	*  If you're using Alpine Linux (like the one from of oznu/docker-homebridge), use this command:
 		```
-		apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
+		apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ add android-tools
 		```
 	*  For other OS and method please download it in here: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
 	*  When it properly installed, please check your ADB is up and running with this command: 
@@ -68,7 +68,7 @@ This plugins register it self as external accesorries, so make sure after you ad
 * If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), append this line to your `config/startup.sh` to install adb automatically
 	```shell
 	# Install adb, required by the homebridge-adb plugin
-	apk --update-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ add android-tools
+	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ add android-tools
 	```
 
 * If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), append this line to your `config/startup.sh` to install adb automatically
