@@ -50,6 +50,7 @@ class ADBPlugin {
 		this.currentAppIndex = 0;
 		this.currentAppOnProgress = false;
 		this.checkPowerOnProgress = false;
+		this.prevStdout = "";
 		this.limit_retry = LIMIT_RETRY;
 
 
@@ -261,25 +262,31 @@ class ADBPlugin {
 		// handle [input source]
 		this.tvService.getCharacteristic(Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
-				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-					if(!err) {
-						let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
+				if(!this.currentAppOnProgress) {
+					this.currentAppOnProgress = true;
 
-						this.currentAppIndex = state;
+					exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+						if(!err) {
+							let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
-						if(this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
+							this.currentAppIndex = state;
 
-						exec(adb, (err, stdout, stderr) => {
-							if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
-							else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentAppIndex].id);
-						});
+							if(this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
 
-						callback(null);
-					} else {
-						this.log.info(this.ip, "- Device not responding");
-						callback(null);
-					}
-				});
+							exec(adb, (err, stdout, stderr) => {
+								if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
+								else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentAppIndex].id);
+							});
+
+							callback(null);
+						} else {
+							this.log.info(this.ip, "- Device not responding");
+							callback(null);
+						}
+
+						this.currentAppOnProgress = false;
+					});
+				}
 			});
 	}
 
@@ -427,57 +434,60 @@ class ADBPlugin {
 			this.currentAppOnProgress = true;
 
 			exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
-				let otherApp = true;
-				stdout = stdout.trim();
+				if(!err) {
+					stdout = stdout.trim();
+					if(stdout != this.prevStdout) {
+						let otherApp = true;
 
-				// Identified current focused app
-				if(stdout) {
-					stdout = stdout.split("/");
-					stdout[0] = stdout[0].split(" ");
-					stdout[0] = stdout[0][4];
+						// Identified current focused app
+						this.prevStdout = stdout;
+						if(stdout) {
+							stdout = stdout.split("/");
+							stdout[0] = stdout[0].split(" ");
+							stdout[0] = stdout[0][4];
 
-					if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
-					else stdout = stdout[0];
-				} else {
-					stdout = OTHER_APP_ID;
-				}
+							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
+							else stdout = stdout[0];
+						} else stdout = OTHER_APP_ID;
 
 
-				if(!err && this.inputs[this.currentAppIndex].id != stdout) {
-					this.inputs.forEach((input, i) => {
-						// Home or registered app
-						if(stdout == input.id) {
-							this.currentAppIndex = i;
-							otherApp = false;
+						if(this.inputs[this.currentAppIndex].id != stdout) {
+							this.inputs.forEach((input, i) => {
+								// Home or registered app
+								if(stdout == input.id) {
+									this.currentAppIndex = i;
+									otherApp = false;
+								}
+							});
+
+							// Other app
+							if(otherApp) {
+								let name = stdout.split("."),
+									humanName = "",
+									i = 0;
+
+								// Extract human readable name from app package name
+								while(name[i]) {
+									name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
+									if(i > 0)
+										if(name[i] != "Com" && name[i] != "Android")
+											if(name[i] == "Vending") humanName += "Play Store";
+											else if(name[i] == "Gm") humanName += "GMail";
+											else humanName += (" " + name[i]);
+									i++;
+								}
+								humanName = humanName.trim();
+								if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
+
+								this.currentAppIndex = this.inputs.length - 1;
+								if(this.inputs[this.currentAppIndex]) this.inputs[this.currentAppIndex].id = stdout;
+								if(this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
+							}
+
+							this.tvService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentAppIndex);
+							this.log.info(this.ip, "- Switched from device -", stdout);
 						}
-					});
-
-					// Other app
-					if(otherApp) {
-						let name = stdout.split("."),
-							humanName = "",
-							i = 0;
-
-						// Extract human readable name from app package name
-						while(name[i]) {
-							name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
-							if(i > 0)
-								if(name[i] != "Com" && name[i] != "Android")
-									if(name[i] == "Vending") humanName += "Play Store";
-									else if(name[i] == "Gm") humanName += "GMail";
-									else humanName += (" " + name[i]);
-							i++;
-						}
-						humanName = humanName.trim();
-						if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
-
-						this.currentAppIndex = this.inputs.length - 1;
-						if(this.inputs[this.currentAppIndex]) this.inputs[this.currentAppIndex].id = stdout;
-						if(this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
 					}
-
-					this.tvService.setCharacteristic(Characteristic.ActiveIdentifier, this.currentAppIndex);
-					this.log.info(this.ip, "- Switched from device -", stdout);
 				}
 
 				this.currentAppOnProgress = false;
