@@ -224,24 +224,29 @@ class ADBPlugin {
 		// handle [on / off]
 		this.tvService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				this.connect(() => {
-					if(state) {
-						// When it sleep, wake it up
-						exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
-							if(err) this.log.info(this.ip, "- Can't make device wakeup, or it's already awake");
-							else this.log.info(this.ip, "- Awake");
+				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					if(!err) {
+						if(state) {
+							// When it sleep, wake it up
+							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
+								if(err) this.log.info(this.ip, "- Can't make device wakeup, or it's already awake");
+								else this.log.info(this.ip, "- Awake");
 
-							this.tvService.updateCharacteristic(Characteristic.Active, state);
-							callback(null);
-						});
+								this.tvService.updateCharacteristic(Characteristic.Active, state);
+								callback(null);
+							});
+						} else {
+							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
+								if(err) this.log.info(this.ip, "- Can't make device sleep, or it's already sleep");
+								else this.log.info(this.ip, "- Sleeping");
+
+								this.tvService.updateCharacteristic(Characteristic.Active, state);
+								callback(null);
+							});
+						}
 					} else {
-						exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
-							if(err) this.log.info(this.ip, "- Can't make device sleep, or it's already sleep");
-							else this.log.info(this.ip, "- Sleeping");
-
-							this.tvService.updateCharacteristic(Characteristic.Active, state);
-							callback(null);
-						});
+						this.log.info(this.ip, "- Device not responding");
+						callback(null);
 					}
 				});
 			}).on('get', (callback) => {
@@ -256,19 +261,24 @@ class ADBPlugin {
 		// handle [input source]
 		this.tvService.getCharacteristic(Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
-				this.connect(() => {
-					let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
+				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					if(!err) {
+						let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
-					this.currentAppIndex = state;
+						this.currentAppIndex = state;
 
-					if(this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
+						if(this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
 
-					exec(adb, (err, stdout, stderr) => {
-						if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
-						else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentAppIndex].id);
-					});
+						exec(adb, (err, stdout, stderr) => {
+							if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
+							else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentAppIndex].id);
+						});
 
-					callback(null);
+						callback(null);
+					} else {
+						this.log.info(this.ip, "- Device not responding");
+						callback(null);
+					}
 				});
 			});
 	}
