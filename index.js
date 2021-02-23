@@ -272,7 +272,7 @@ class ADBPlugin {
 							this.currentInputIndex = state;
 
 							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].value != OTHER_APP_ID) {
-								if((this.inputs[this.currentInputIndex].type || 'app' ) === 'app')
+								if(this.inputs[this.currentInputIndex].type !== 'command')
 									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].value} 1"`;
 								else
 									adb = `adb -s ${this.ip} shell ${this.inputs[this.currentInputIndex].value}`;
@@ -456,7 +456,7 @@ class ADBPlugin {
 						} else stdout = OTHER_APP_ID;
 
 
-						if(this.inputs[this.currentInputIndex].value != stdout) {
+						if(this.inputs[this.currentInputIndex].value != stdout && this.inputs[this.currentInputIndex].type !== 'command') {
 							this.inputs.forEach((input, i) => {
 								// Home or registered app
 								if(stdout == input.value) {
