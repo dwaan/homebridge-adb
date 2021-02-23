@@ -272,7 +272,7 @@ class ADBPlugin {
 							this.currentInputIndex = state;
 
 							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].value != OTHER_APP_ID) {
-								if(this.inputs[this.currentInputIndex].type === 'app')
+								if((this.inputs[this.currentInputIndex].type || 'app' ) === 'app')
 									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].value} 1"`;
 								else
 									adb = `adb -s ${this.ip} shell ${this.inputs[this.currentInputIndex].value}`;
