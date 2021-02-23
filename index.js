@@ -455,8 +455,7 @@ class ADBPlugin {
 							else stdout = stdout[0];
 						} else stdout = OTHER_APP_ID;
 
-
-						if(this.inputs[this.currentInputIndex].value != stdout && this.inputs[this.currentInputIndex].type !== 'command') {
+						if(this.inputs[this.currentInputIndex].value != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
 							this.inputs.forEach((input, i) => {
 								// Home or registered app
 								if(stdout == input.value) {
