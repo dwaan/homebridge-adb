@@ -94,8 +94,8 @@
 										"required": true,
 										"default": "app",
 										"oneOf": [
-											{ "title": "App", "string": "app" },
-											{ "title": "Command", "string": "command" }
+											{ "title": "App", "enum": ["app"] },
+											{ "title": "Command", "enum": ["command"] }
 										]
 									}
 								}
