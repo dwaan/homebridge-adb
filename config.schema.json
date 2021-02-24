@@ -81,11 +81,22 @@
 										"placeholder": "Your apps name",
 										"required": true
 									},
-									"id": {
-										"title": "App ID",
+									"value": {
+										"title": "Value",
 										"type": "string",
-										"placeholder": "com.your.app.id",
+										"placeholder": "App ID: 'com.your.app.id' or ADB command",
 										"required": true
+									},
+									"type": {
+										"title": "Input type",
+										"type": "string",
+										"placeholder": "app",
+										"required": true,
+										"default": "app",
+										"oneOf": [
+											{ "title": "App", "enum": ["app"] },
+											{ "title": "Command", "enum": ["command"] }
+										]
 									}
 								}
 							}

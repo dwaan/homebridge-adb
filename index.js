@@ -42,12 +42,12 @@ class ADBPlugin {
 		// Inputs
 		this.inputs = this.config.inputs;
 		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
-		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
+		this.inputs.unshift({ "name": "Home", "value": HOME_APP_ID });
+		this.inputs.push({ "name": "Other", "value": OTHER_APP_ID });
 
 		// Variable
 		this.awake = false;
-		this.currentAppIndex = 0;
+		this.currentInputIndex = 0;
 		this.currentAppOnProgress = false;
 		this.checkPowerOnProgress = false;
 		this.prevStdout = "";
@@ -269,13 +269,18 @@ class ADBPlugin {
 						if(!err) {
 							let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
-							this.currentAppIndex = state;
+							this.currentInputIndex = state;
 
-							if(this.currentAppIndex != 0 && this.inputs[this.currentAppIndex].id != OTHER_APP_ID) adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentAppIndex].id} 1"`;
+							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].value != OTHER_APP_ID) {
+								if(this.inputs[this.currentInputIndex].type !== 'command')
+									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].value} 1"`;
+								else
+									adb = `adb -s ${this.ip} shell ${this.inputs[this.currentInputIndex].value}`;
+							}
 
 							exec(adb, (err, stdout, stderr) => {
-								if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentAppIndex].id);
-								else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentAppIndex].id);
+								if(!err) this.log.info(this.ip, "- Switched from home app -", this.inputs[this.currentInputIndex].name);
+								else  this.log.info(this.ip, "- Can't switched from home app -", this.inputs[this.currentInputIndex].name);
 							});
 
 							callback(null);
@@ -446,16 +451,15 @@ class ADBPlugin {
 							stdout[0] = stdout[0].split(" ");
 							stdout[0] = stdout[0][4];
 
-							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
+							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].value;
 							else stdout = stdout[0];
 						} else stdout = OTHER_APP_ID;
 
-
-						if(this.inputs[this.currentAppIndex].id != stdout) {
+						if(this.inputs[this.currentInputIndex].value != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
 							this.inputs.forEach((input, i) => {
 								// Home or registered app
-								if(stdout == input.id) {
-									this.currentAppIndex = i;
+								if(stdout == input.value) {
+									this.currentInputIndex = i;
 									otherApp = false;
 								}
 							});
@@ -479,12 +483,12 @@ class ADBPlugin {
 								humanName = humanName.trim();
 								if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
-								this.currentAppIndex = this.inputs.length - 1;
-								if(this.inputs[this.currentAppIndex]) this.inputs[this.currentAppIndex].id = stdout;
-								if(this.inputs[this.currentAppIndex].service) this.inputs[this.currentAppIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentAppIndex + 1}. ${humanName}`);
+								this.currentInputIndex = this.inputs.length - 1;
+								if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].value = stdout;
+								if(this.inputs[this.currentInputIndex].service) this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentInputIndex + 1}. ${humanName}`);
 							}
 
-							this.tvService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentAppIndex);
+							this.tvService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
 							this.log.info(this.ip, "- Switched from device -", stdout);
 						}
 					}
