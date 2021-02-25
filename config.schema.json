@@ -76,27 +76,16 @@
 								"type": "object",
 								"properties": {
 									"name": {
-										"title": "App Name",
+										"title": "Name",
 										"type": "string",
 										"placeholder": "Your apps name",
 										"required": true
 									},
-									"value": {
-										"title": "Value",
+									"id": {
+										"title": "App ID or ADB Command",
 										"type": "string",
-										"placeholder": "App ID: 'com.your.app.id' or ADB command",
+										"placeholder": "App ID (com.your.app.id) or ADB command",
 										"required": true
-									},
-									"type": {
-										"title": "Input type",
-										"type": "string",
-										"placeholder": "app",
-										"required": true,
-										"default": "app",
-										"oneOf": [
-											{ "title": "App", "enum": ["app"] },
-											{ "title": "Command", "enum": ["command"] }
-										]
 									}
 								}
 							}
@@ -191,12 +180,12 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].inputs[].id",
-											"flex": "4 4 100px"
+											"key": "accessories[].inputs[].name",
+											"flex": "3 3 70px"
 										},
 										{
-											"key": "accessories[].inputs[].name",
-											"flex": "3 3 100px"
+											"key": "accessories[].inputs[].id",
+											"flex": "5 5 170px"
 										}
 									]
 								}
