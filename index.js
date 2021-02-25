@@ -179,7 +179,6 @@ class ADBPlugin {
 			if(configured == Characteristic.IsConfigured.CONFIGURED) {
 				this.inputs[i].service = service;
 			}
-
 		};
 	}
 
@@ -212,10 +211,10 @@ class ADBPlugin {
 		// handle [mute control] - not implemented yet
 		this.tvSpeakerService.getCharacteristic(Characteristic.Mute)
 			.on('get', (callback) => {
-				callback(null);
+				callback(null, 0);
 			})
 			.on('set', (state, callback) => {
-				callback(null);
+				callback(null, state);
 			});
 
 			this.tvService.addLinkedService(this.tvSpeakerService);
@@ -234,7 +233,6 @@ class ADBPlugin {
 								else this.log.info(this.ip, "- Awake");
 
 								this.tvService.updateCharacteristic(Characteristic.Active, state);
-								callback(null);
 							});
 						} else {
 							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
@@ -242,13 +240,13 @@ class ADBPlugin {
 								else this.log.info(this.ip, "- Sleeping");
 
 								this.tvService.updateCharacteristic(Characteristic.Active, state);
-								callback(null);
 							});
 						}
 					} else {
 						this.log.info(this.ip, "- Device not responding");
-						callback(null);
 					}
+
+					callback(null);
 				});
 			}).on('get', (callback) => {
 				this.checkPowerOnProgress = false;
@@ -318,14 +316,7 @@ class ADBPlugin {
 		// handle [media state] - not implemented yet
 		this.tvService.getCharacteristic(Characteristic.TargetMediaState)
 			.on('get', (callback) => {
-				// if(state == Characteristic.TargetMediaState.PLAY)
-				// 	this.log.info(this.ip, '- Get Media: Accessory is playing');
-				// else if(state == Characteristic.TargetMediaState.PAUSE)
-				// 	this.log.info(this.ip, '- Get Media: Accessory is paused');
-				// else
-				// 	this.log.info(this.ip, '- Get Media: Accessory is stoped');
-
-				callback(null);
+				callback(null, 0);
 			})
 			.on('set', (state, callback) => {
 				if(state == Characteristic.TargetMediaState.PLAY)
@@ -335,7 +326,7 @@ class ADBPlugin {
 				else
 					this.log.info(this.ip, '- Set Media: Accessory is stoped');
 
-				callback(null);
+				callback(null, state);
 			});
 	}
 

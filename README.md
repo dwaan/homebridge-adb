@@ -158,7 +158,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	```
 * To know device sleep status based on whether secreen is turned on or off
 	```
-	adb -s your-device-ip shell 'dumpsys power | grep mHoldingDisplay' | cut -d = -f 2
+	adb -s your-device-ip shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
 	```
 * Running an app using their package name
 	```
