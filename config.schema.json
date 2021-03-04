@@ -45,6 +45,21 @@
 								{ "title": "10000", "enum": ["10000"] }
 					        ]
 						},
+						"category": {
+							"type": "string",
+							"title": "Category",
+							"placeholder": "Pick a category that suitable for your",
+							"type": "string",
+							"default": "TELEVISION",
+					        "oneOf": [
+								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
+								{ "title": "Television", "enum": ["TELEVISION"] },
+								{ "title": "Streaming Stick", "enum": ["TV_STREAMING_STICK"] },
+								{ "title": "Set Top Box", "enum": ["TV_SET_TOP_BOX"] },
+								{ "title": "Audio Reciever", "enum": ["AUDIO_RECEIVER"] },
+								{ "title": "Speaker", "enum": ["SPEAKER"] }
+					        ]
+						},
 						"backbutton": {
 							"type": "string",
 							"title": "Back Button",
@@ -110,8 +125,14 @@
 							"flex-direction": "row",
 							"items": [
 								{
-									"key": "accessories[].name"
+									"key": "accessories[].name",
+									"flex": "2 2 200px"
+								},
+								{
+									"key": "accessories[].category",
+									"flex": "1 1 100px"
 								}
+
 							]
 						},
 						{
@@ -121,7 +142,7 @@
 							"items": [
 								{
 									"key": "accessories[].ip",
-									"flex": "1 1 100px"
+									"flex": "2 2 200px"
 								},
 								{
 									"key": "accessories[].interval",
