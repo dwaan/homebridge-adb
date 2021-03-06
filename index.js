@@ -102,7 +102,7 @@ class ADBPlugin {
 		if(!this.isSpeaker()) this.deviceService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
 		// Handle volume and media
-		this.handleVolume();
+		// this.handleVolume();
 		this.handleMediaStatus();
 		this.handleMediaStates();
 
@@ -128,7 +128,12 @@ class ADBPlugin {
 			var adbCommand = `adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`;
 			// get the accesory information and send it to HB
 			exec(adbCommand, (err, stdout, stderr) => {
-				if(err) this.log.info(`\nCan't get information from '${this.name}'.\nThis shouldn't be a problem, but please report this output.\n1. When running this command\n${adbCommand}\n2. Output:\n${stdout.trim()}\n3. Error output:\n${stderr.trim()}\n`);
+				if(err) {
+					// this.log.info(`\nCan't get information from '${this.name}'.\nThis shouldn't be a problem, but please report this output.\n1. When running this command\n${adbCommand}\n2. Output:\n${stdout.trim()}\n3. Error output:\n${stderr.trim()}\n`);
+					if(stderr.includes('device still authorizing')) this.log.info(this.name, ' - Device is authorizing. This shouldn\'t be a problem., but if problem problem occurred, please restart homebridge.');
+					else if(stderr.includes('device unauthorized.')) this.log.info(this.name, ' - Device is unauthorized. This shouldn\'t be a problem, but if problem problem occurred, please restart homebridge.');
+					else this.log.info(this.name, ' - Can\'t get device information. This shouldn\'t be a problem, but if problem problem occurred, please restart homebridge.');
+				}
 
 				stdout = stdout.split("\n");
 
@@ -512,6 +517,8 @@ class ADBPlugin {
 							stdout = stdout.split("/");
 							stdout[0] = stdout[0].split(" ");
 							stdout[0] = stdout[0][4];
+
+							if(stdout[1] == undefined) stdout[1] = "";
 
 							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
 							else stdout = stdout[0];
