@@ -60,6 +60,17 @@
 								{ "title": "Speaker", "enum": ["SPEAKER"] }
 					        ]
 						},
+						"playbacksensor": {
+							"type": "string",
+							"title": "Playback as Motion Sensor",
+							"placeholder": "Playback as Motion Sensor",
+					        "type": "boolean",
+							"default": "true",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
 						"backbutton": {
 							"type": "string",
 							"title": "Back Button",
@@ -147,6 +158,16 @@
 								{
 									"key": "accessories[].interval",
 									"flex": "1 1 100px"
+								}
+							]
+						},
+						{
+							"type": "flex",
+							"displayFlex": true,
+							"flex-direction": "row",
+							"items": [
+								{
+									"key": "accessories[].playbacksensor"
 								}
 							]
 						},

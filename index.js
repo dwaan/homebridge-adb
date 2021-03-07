@@ -34,7 +34,6 @@ class ADBPlugin {
 			this.log.error("\nPlease provide IP for this accessory: ${this.name}\n");
 			return;
 		}
-		this.log.info(`Creating: ${this.name}`);
 		// Interval
 		this.interval = this.config.interval || 5000;
 		// Can't be lower than 300 miliseconds, it will flood your network
@@ -44,7 +43,8 @@ class ADBPlugin {
 		if(!this.inputs) this.inputs = [];
 		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
 		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
-		this.showremote =  this.config.showremote;
+		// Sensor
+		this.playbacksensor =  this.config.playbacksensor;
 		// Category
 		this.category = "TELEVISION";
 		if(this.config.category) this.category = this.config.category.toUpperCase();
@@ -57,9 +57,11 @@ class ADBPlugin {
 
 		// Variable
 		this.awake = false;
+		this.playing = false;
 		this.currentInputIndex = 0;
 		this.currentAppOnProgress = false;
 		this.checkPowerOnProgress = false;
+		this.checkPlaybackProgress = false;
 		this.prevStdout = "";
 		this.limit_retry = LIMIT_RETRY;
 
@@ -70,6 +72,7 @@ class ADBPlugin {
 
 		// generate a UUID
 		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name);
+		const uuidos = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name + "OccupancySensor");
 
 		// create the external accessory
 		this.device = new this.api.platformAccessory(this.name, uuid);
@@ -103,8 +106,8 @@ class ADBPlugin {
 
 		// Handle volume and media
 		// this.handleVolume();
-		this.handleMediaStatus();
-		this.handleMediaStates();
+		// this.handleMediaStatus();
+		// this.handleMediaStates();
 
 		if(!this.isSpeaker()) {
 			// Handle input
@@ -119,6 +122,15 @@ class ADBPlugin {
 			this.createTelevisionSpeakers();
 		}
 
+		// add playback sensor
+		if(this.playbacksensor) {
+			this.devicePlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
+			this.devicePlaybackSensor.category = this.api.hap.Categories.SENSOR;
+			this.devicePlaybackSensorInfo = this.devicePlaybackSensor.getService(Service.AccessoryInformation);
+			this.devicePlaybackSensorService = this.devicePlaybackSensor.addService(Service.MotionSensor);
+			this.handleMediaAsSensor();
+		}
+
 		/**
 		 * Publish as external accessory
 		 * Check ADB connection before publishing the accesory
@@ -126,24 +138,38 @@ class ADBPlugin {
 
 		this.connect(() => {
 			var adbCommand = `adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`;
+
 			// get the accesory information and send it to HB
 			exec(adbCommand, (err, stdout, stderr) => {
 				if(err) {
-					// this.log.info(`\nCan't get information from '${this.name}'.\nThis shouldn't be a problem, but please report this output.\n1. When running this command\n${adbCommand}\n2. Output:\n${stdout.trim()}\n3. Error output:\n${stderr.trim()}\n`);
-					if(stderr.includes('device still authorizing')) this.log.info(this.name, ' - Device is authorizing. This shouldn\'t be a problem., but if problem problem occurred, please restart homebridge.');
-					else if(stderr.includes('device unauthorized.')) this.log.info(this.name, ' - Device is unauthorized. This shouldn\'t be a problem, but if problem problem occurred, please restart homebridge.');
-					else this.log.info(this.name, ' - Can\'t get device information. This shouldn\'t be a problem, but if problem problem occurred, please restart homebridge.');
+					var message = "";
+
+					if(stderr.includes('device still authorizing')) message = 'Device still authorizing.';
+					else if(stderr.includes('device unauthorized.')) message = 'Device unauthorized.';
+					else message = 'Can\'t get device information.';
+
+					this.log.info(this.name, ` - ${message} You can ignore this message. But if problem problem occurred, please restart your homebridge server.`);
 				}
 
 				stdout = stdout.split("\n");
 
+				// Publish the accessories
 				this.deviceInfo
 					.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
 					.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 					.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
-
-				// Publish the accessories
 				this.api.publishExternalAccessories(PLUGIN_NAME, [this.device]);
+				this.log.info(this.name, `- Created`);
+
+				// Publish additional sensor accesories
+				if(this.playbacksensor) {
+					this.devicePlaybackSensorInfo
+						.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
+						.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
+						.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
+					this.api.publishExternalAccessories(PLUGIN_NAME, [this.devicePlaybackSensor]);
+					this.log.info(this.name, `- Sensor created`);
+				}
 			});
 
 			// Loop the power status
@@ -407,6 +433,20 @@ class ADBPlugin {
 			});
 	}
 
+	handleMediaAsSensor() {
+		var that = this;
+
+		// handle [media state]
+		this.devicePlaybackSensorService.getCharacteristic(Characteristic.MotionDetected)
+			.on('get', (callback) => {
+				var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
+				if(that.playing) state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
+
+				that.checkPlayback();
+				callback(null, state);
+			});
+	}
+
 	handleRemoteControl() {
 		// handle [remote control]
 		this.deviceService.getCharacteristic(Characteristic.RemoteKey)
@@ -476,6 +516,37 @@ class ADBPlugin {
 				});
 				callback(null);
 			});
+	}
+
+	checkPlayback(callback) {
+		var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
+
+		if(!this.checkPlaybackProgress) {
+			this.checkPlaybackProgress = true;
+			exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
+				if(err) this.log.info(this.name, '- Can\'t get media status');
+				else {
+					stdout = stdout.split("\n");
+					stdout = stdout[0].trim();
+
+					if(stdout.includes("state=3")) {
+						state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
+						if(!this.playing) {
+							this.log.info(this.name, '- Playback start');
+							this.playing = true;
+						}
+					} else if(this.playing) {
+						this.log.info(this.name, '- Playback stop');
+						this.playing = false;
+					}
+				}
+
+				this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
+
+				this.checkPlaybackProgress = false;
+				if(callback) callback(state);
+			});
+		}
 	}
 
 	checkPower(callback) {
@@ -599,6 +670,10 @@ class ADBPlugin {
 					if(that.awake && !that.isSpeaker()) that.checkInput();
 				}
 			});
+
+			if(this.playbacksensor) {
+				that.checkPlayback();
+			}
 		}, this.interval);
 	}
 
@@ -610,7 +685,15 @@ class ADBPlugin {
 				this.log.info(this.name, "- Reconnecting");
 
 				if(this.limit_retry <= 0) {
-					this.log.error(`\nProblem when getting '${this.name}' power status.\nIf your network works fine, you can report this output.\n1. When running this command\n${adbCommand}\n2. Output:\n${stdout.trim()}\n3. Error output:\n${stderr.trim()}\n`);
+					this.log.infor(this.name, `Device disconnect?\n
+						If your device is currently off, please turn of your device manually. Your device disconnected from network connection when it turn off and this plugins can't communicate with it.\n
+						If your device is currently on, please report this error:\n
+						1. When running this command\n
+						${adbCommand}\n
+						2. Output:\n
+						${stdout.trim()}\n
+						3. Error output:\n
+						${stderr.trim()}\n`);
 					clearInterval(this.intervalHandler);
 				}
 			} else {
@@ -621,7 +704,6 @@ class ADBPlugin {
 		});
 	}
 }
-
 
 
 class ADBPluginPlatform {
