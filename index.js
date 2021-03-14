@@ -333,8 +333,8 @@ class ADBPlugin {
 							}
 
 							exec(adb, (err, stdout, stderr) => {
-								if(!err) this.log.info(this.name, "- Switched from home app -", this.inputs[this.currentInputIndex].name);
-								else  this.log.info(this.name, "- Can't switched from home app -", this.inputs[this.currentInputIndex].name);
+								if(!err) this.log.info(this.name, "- Current app -", this.inputs[this.currentInputIndex].name);
+								else  this.log.info(this.name, "- Can't open -", this.inputs[this.currentInputIndex].name);
 							});
 						} else {
 							this.log.info(this.name, "- Device not responding");
@@ -578,7 +578,9 @@ class ADBPlugin {
 
 			exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
 				if(!err) {
+					if(!stdout) stdout = "";
 					stdout = stdout.trim();
+
 					if(stdout != this.prevStdout) {
 						let otherApp = true;
 
@@ -589,6 +591,7 @@ class ADBPlugin {
 							stdout[0] = stdout[0].split(" ");
 							stdout[0] = stdout[0][4];
 
+							if(stdout[0] == undefined) stdout[0] = HOME_APP_ID;
 							if(stdout[1] == undefined) stdout[1] = "";
 
 							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
@@ -629,7 +632,7 @@ class ADBPlugin {
 							}
 
 							this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
-							this.log.info(this.name, "- Switched from device -", stdout);
+							this.log.info(this.name, "- Current app -", stdout);
 						}
 					}
 				}
@@ -642,19 +645,21 @@ class ADBPlugin {
 	connect(callback) {
 		var that = this;
 		var error = function() {
-			that.log.error(`\nCan't connect to "${that.name}",\nwith IP address: ${that.ip}.\nPlease check you ADB connection,\nor make sure your device is on\nand connected to the same network.\n`);
+			that.log.info(`${that.name} - Can't connect establish ADB connection with your device.`);
 		}
 
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
-			exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-				var connected = false;
+			if(!err) {
+				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					var connected = false;
 
-				if(!err) {
-					connected = stdout.trim();
-					connected = connected.includes("connected");
-					if(connected) callback();
-				} else error();
-			});
+					if(!err) {
+						connected = stdout.trim();
+						connected = connected.includes("connected");
+						if(connected) callback();
+					} else error();
+				});
+			} else error();
 		});
 	}
 
