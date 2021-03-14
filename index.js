@@ -518,16 +518,20 @@ class ADBPlugin {
 			});
 	}
 
-	checkPlayback(callback) {
+	checkPlayback() {
 		var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
 
-		if(!this.checkPlaybackProgress) {
+		if(!this.awake) {
+			// When device is asleep, set the sensor off
+			this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
+		} else if(!this.checkPlaybackProgress) {
 			this.checkPlaybackProgress = true;
 			exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
 				if(err) this.log.info(this.name, '- Can\'t get media status');
 				else {
 					stdout = stdout.split("\n");
-					stdout = stdout[0].trim();
+					if(stdout[0]) stdout = stdout[0].trim();
+					else stdout = "";
 
 					if(stdout.includes("state=3")) {
 						state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
@@ -542,9 +546,7 @@ class ADBPlugin {
 				}
 
 				this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
-
 				this.checkPlaybackProgress = false;
-				if(callback) callback(state);
 			});
 		}
 	}
