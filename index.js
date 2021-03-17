@@ -148,7 +148,7 @@ class ADBPlugin {
 					else if(stderr.includes('device unauthorized.')) message = 'Device unauthorized.';
 					else message = 'Can\'t get device information.';
 
-					this.log.info(this.name, ` - ${message} You can ignore this message. But if problem problem occurred, please restart your homebridge server.`);
+					this.log.info(this.name, ` - ${message} You can ignore this message. But if problem occurred with your device, please restart your homebridge server.`);
 				}
 
 				stdout = stdout.split("\n");
@@ -555,8 +555,8 @@ class ADBPlugin {
 		if(!this.checkPowerOnProgress) {
 			this.checkPowerOnProgress = true;
 
-			this.dumpsys((err, stdout, stderr) => {
-				if(!err) {
+			this.dumpsys((error, stdout) => {
+				if(!error) {
 					var output = stdout.trim();
 
 					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
@@ -647,21 +647,17 @@ class ADBPlugin {
 	connect(callback) {
 		var that = this;
 		var error = function() {
-			that.log.info(`${that.name} - Can't connect establish ADB connection with your device.`);
+			that.log.info(`${that.name} - Device disconnected? Trying to reconnect.`);
 		}
 
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
-			if(!err) {
+			if(err) error();
+			else {
 				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-					var connected = false;
-
-					if(!err) {
-						connected = stdout.trim();
-						connected = connected.includes("connected");
-						if(connected) callback();
-					} else error();
+					if(err) error();
+					else if(callback) callback();
 				});
-			} else error();
+			}
 		});
 	}
 
@@ -685,28 +681,27 @@ class ADBPlugin {
 	}
 
 	dumpsys(callback) {
+		var that = this;
 		var adbCommand = `adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`;
+
 		exec(adbCommand, (err, stdout, stderr) => {
 			if(err) {
-				this.limit_retry--;
-				this.log.info(this.name, "- Reconnecting");
-
-				if(this.limit_retry <= 0) {
-					this.log.infor(this.name, `Device disconnect?\n
-						If your device is currently off, please turn of your device manually. Your device disconnected from network connection when it turn off and this plugins can't communicate with it.\n
-						If your device is currently on, please report this error:\n
-						1. When running this command\n
-						${adbCommand}\n
-						2. Output:\n
-						${stdout.trim()}\n
-						3. Error output:\n
-						${stderr.trim()}\n`);
-					clearInterval(this.intervalHandler);
+				if(that.limit_retry > 0) {
+					that.limit_retry--;
+					callback(true, 'false');
+				} else if (that.limit_retry == 0){
+					that.log.info(that.name, "- Device disconnected. Please turn on your device manually.");
+					that.limit_retry--;
+					callback(false, 'false');
 				}
 			} else {
-				this.limit_retry = LIMIT_RETRY;
+				if(that.limit_retry < 0) {
+					that.limit_retry = LIMIT_RETRY;
+					that.log.info(that.name, "- Connected.");
+				}
+
 				stdout = stdout.trim().split('=')[1];
-				callback(err, stdout, stderr);
+				callback(false, stdout);
 			}
 		});
 	}
