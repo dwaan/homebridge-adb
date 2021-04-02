@@ -179,6 +179,8 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 
 ## FAQ
 
+* My playback sensor doesnt seem to working after updating to 1.4.3 from 1.4.x
+	* Remove your playback sensor and the readd it again in Home app, it seems like the new code causing Homekit to unrecognized it.
 * My device is not responding after updating to 1.4.*
 	* Due additional new features of playback sensor, HomeKit is unable to recognize the old accessory due to different characteristics. To fix this, you need to remove your accesory from Home app, then rename you device in config.json, and restart Homebridhe. This will create a new accesories that you can re-add again in home app. When you add them, be sure to rename your new accessory the same as to the old one in Home app if posible, this hopefully will retain your automations.
 * Where can I use volume and D-Pad control for my device?
