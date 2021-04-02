@@ -46,6 +46,8 @@ class ADBPlugin {
 		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 		// Sensor
 		this.playbacksensor =  this.config.playbacksensor;
+		this.playbacksensorexclude =  this.config.playbacksensorexclude;
+		if(!this.playbacksensorexclude) this.playbacksensorexclude = "";
 		// Category
 		this.category = "TELEVISION";
 		if(this.config.category) this.category = this.config.category.toUpperCase();
@@ -60,11 +62,17 @@ class ADBPlugin {
 		this.awake = false;
 		this.playing = false;
 		this.currentInputIndex = 0;
+		this.currentApp = false;
 		this.currentAppOnProgress = false;
 		this.checkPowerOnProgress = false;
 		this.checkPlaybackProgress = false;
 		this.prevStdout = "";
 		this.limit_retry = LIMIT_RETRY;
+
+		// PLayback
+		this.noPlaybackSensor = false;
+		this.useTail = undefined;
+		this.useHead = undefined;
 
 
 		/**
@@ -139,6 +147,28 @@ class ADBPlugin {
 
 		this.connect(() => {
 			var adbCommand = `adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`;
+
+			// Check if device have tail and head command
+			if(this.useTail === undefined) {
+				exec(`adb -s ${this.ip} shell "tail --help"`, (err, stdout, stderr) => {
+					if(err) {
+						this.displayDebug(`constructor - can't use tail command, adb will send larger output`);
+						this.useTail = false;
+					} else {
+						this.useTail = true;
+					}
+				});
+			}
+			if(this.useHead === undefined) {
+				exec(`adb -s ${this.ip} shell "head --help"`, (err, stdout, stderr) => {
+					if(err) {
+						this.displayDebug(`constructor - can't use head command, adb will send larger output`);
+						this.useHead = false;
+					} else {
+						this.useHead = true;
+					}
+				});
+			}
 
 			// get the accesory information and send it to HB
 			exec(adbCommand, (err, stdout, stderr) => {
@@ -282,21 +312,26 @@ class ADBPlugin {
 						if(state) {
 							// When it sleep, wake it up
 							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
-								if(err) this.log.info(this.name, "- Can't make device wakeup, or it's already awake");
-								else this.log.info(this.name, "- Awake");
+								if(err) {
+									this.log.info(this.name, "- Can't make device wakeup");
+									this.displayDebug("handleOnOff - Error - " + stderr.trim());
+								} else this.displayDebug("Awake");
 
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
 							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
-								if(err) this.log.info(this.name, "- Can't make device sleep, or it's already sleep");
-								else this.log.info(this.name, "- Sleeping");
+								if(err) {
+									this.log.info(this.name, "- Can't make device sleep");
+									this.displayDebug("handleOnOff - Error - " + stderr.trim());
+								} else this.displayDebug("Sleeping");
 
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						}
 					} else {
 						this.log.info(this.name, "- Device not responding");
+						this.displayDebug("handleOnOff - Error - " + stderr.trim());
 					}
 				});
 
@@ -334,11 +369,13 @@ class ADBPlugin {
 							}
 
 							exec(adb, (err, stdout, stderr) => {
-								if(!err) this.log.info(this.name, "- Current app -", this.inputs[this.currentInputIndex].name);
-								else  this.log.info(this.name, "- Can't open -", this.inputs[this.currentInputIndex].name);
+								if(!err) {
+									this.currentApp = this.inputs[this.currentInputIndex].id;
+									this.log.info(this.name, "- handleInput -", this.inputs[this.currentInputIndex].name);
+								} else this.log.info(this.name, "- handleInput - Can't open -", this.inputs[this.currentInputIndex].name);
 							});
 						} else {
-							this.log.info(this.name, "- Device not responding");
+							this.log.info(this.name, "- handleInput - Device not responding");
 						}
 
 						this.currentAppOnProgress = false;
@@ -362,24 +399,35 @@ class ADBPlugin {
 	}
 
 	handleMediaStatus() {
-		// handle [media status]
+		// unused - handle [media status]
 		this.deviceService.getCharacteristic(Characteristic.CurrentMediaState)
 			.on('get', (callback) => {
 				var state = Characteristic.CurrentMediaState.LOADING;
+				var tail = "";
+				var head = ""
 
-				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
-					if(err) this.log.error(this.name, '- Can\'t get media status');
-					else {
-						stdout = stdout.split("\n");
-						stdout = stdout[0].trim();
+				if(this.useHead === true) head = " | head -1";
+				if(this.useTail === true) tail = " | tail -1";
 
-						if(stdout.includes("state=2, position=0")) state = Characteristic.CurrentMediaState.STOP;
-						else if(stdout.includes("state=3")) state = Characteristic.CurrentMediaState.PLAY;
-						else state = Characteristic.CurrentMediaState.PAUSE;
-					}
+				if(!this.noPlaybackSensor) {
+					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout, stderr) => {
+						if(err) {
+							this.displayDebug(`handleMediaStatus - error - using media session`);
+						} else {
+							stdout = stdout.split("\n");
+							stdout = stdout[0].trim();
 
+							if(stdout.includes("state=2, position=0")) state = Characteristic.CurrentMediaState.STOP;
+							else if(stdout.includes("state=3")) state = Characteristic.CurrentMediaState.PLAY;
+							else state = Characteristic.CurrentMediaState.PAUSE;
+						}
+
+						this.deviceService.setCharacteristic(Characteristic.CurrentMediaState, state);
+					});
+				} else {
+					state = Characteristic.CurrentMediaState.STOP;
 					this.deviceService.setCharacteristic(Characteristic.CurrentMediaState, state);
-				});
+				}
 
 				callback(null, state);
 			});
@@ -513,60 +561,115 @@ class ADBPlugin {
 				}
 
 				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
-					if(err) this.displayDebug(`Can't send: ${key}`);
+					if(err) this.displayDebug(`handleRemoteControl - Can't send: ${key}`);
 				});
 				callback(null);
 			});
 	}
 
 	checkPlayback() {
+		var that = this;
 		var changed = false;
 		var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
+		var tail = "";
+		var head = ""
+
+		if(this.useHead === true) head = " | head -1";
+		if(this.useTail === true) tail = " | tail -1";
 
 		if(!this.awake) {
 			// When device is asleep, set the sensor off
 			if(this.playing) {
+				this.displayDebug(`checkPlayback - device is asleep`);
 				this.playing = false;
 				this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
 			}
-		} else if(!this.checkPlaybackProgress) {
-			this.checkPlaybackProgress = true;
-
-			// exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
-			exec(`adb -s ${this.ip} shell "dumpsys audio | grep 'player piid' | grep ' state:' | tail -1"`, (err, stdout, stderr) => {
-				if(err) {
-					// After restart, android device will display when running this command
-					this.displayDebug(`checkPlayback - error`);
-
-					if(this.playing) {
-						this.playing = false;
-						changed = true;
+		} else if(!this.checkPlaybackProgress && this.currentApp && !this.playbacksensorexclude.includes(this.currentApp)) {
+			if(!this.noPlaybackSensor) {
+				var changeState = function(state, stdout) {
+					if(changed) {
+						if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
+						that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
+						that.displayDebug(`checkPlayback - ${that.playing}`);
+						that.log.info(`Media playing - ${that.playing}`);
+						that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
 					}
-				} else {
-					// stdout = stdout.split("\n");
-					// if(stdout[0]) stdout = stdout[0].trim();
-					// else stdout = "";
+					that.checkPlaybackProgress = false;
+				}
+				var errorState = function(using) {
+					that.displayDebug(`checkPlayback - error - using ${using}`);
 
-					if(stdout.trim().includes("state:started")) {
-						if(!this.playing) {
-							state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
-							this.playing = true;
-							changed = true;
-						}
-					} else if(this.playing) {
-						this.playing = false;
+					if(that.playing) {
+						that.playing = false;
 						changed = true;
 					}
 				}
 
-				if(changed) {
-					this.displayDebug(`checkPlayback - ${stdout.trim()}`);
-					this.displayDebug(`checkPlayback - ${this.playing}`);
-					this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
-				}
+				this.checkPlaybackProgress = true;
 
-				this.checkPlaybackProgress = false;
-			});
+				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'Media button session is'"`, (err, stdout, stderr) => {
+					stdout = stdout.trim();
+
+					if(err) {
+						this.displayDebug(`checkPlayback - error - checking current media app`);
+					} else if(stdout.includes(this.currentApp)) {
+						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState {state=' ${head}"`, (err, stdout, stderr) => {
+							if(err) errorState('media_session');
+							else {
+								stdout = stdout.trim();
+
+								if(stdout != "") {
+									stdout = stdout.split("\n");
+									stdout = stdout[0].trim();
+
+									if(stdout.includes("state=3")) {
+										if(!this.playing) {
+											state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
+											this.playing = true;
+											changed = true;
+										}
+									} else if(this.playing) {
+										this.playing = false;
+										changed = true;
+									}
+								} else {
+									this.displayDebug(`checkPlayback - media_session - no audio playing?`);
+								}
+							}
+
+							changeState(state, 'media_session - ' + stdout);
+						});
+					} else {
+						exec(`adb -s ${this.ip} shell "dumpsys audio | grep 'player piid:' | grep ' state:' ${tail}"`, (err, stdout, stderr) => {
+							// After restart, android device will display error when running this command
+							if(err) errorState('audio');
+							else {
+								stdout = stdout.trim();
+
+								if(stdout != "") {
+									stdout = stdout.trim().split("\n");
+									stdout = stdout[stdout.length - 1].trim();
+
+									if(stdout.includes("state:started")) {
+										if(!this.playing) {
+											state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
+											this.playing = true;
+											changed = true;
+										}
+									} else if(this.playing) {
+										this.playing = false;
+										changed = true;
+									}
+								} else {
+									this.displayDebug(`checkPlayback - audio - no audio playing?`);
+								}
+							}
+
+							changeState(state, 'audio - ' + stdout);
+						});
+					}
+				});
+			}
 		}
 	}
 
@@ -603,7 +706,7 @@ class ADBPlugin {
 		}
 	}
 
-	checkInput(error, value, appId) {
+	checkInput(callback) {
 		if(this.awake && !this.currentAppOnProgress) {
 			this.currentAppOnProgress = true;
 
@@ -666,6 +769,7 @@ class ADBPlugin {
 
 							this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
 							this.log.info(this.name, "- Current app -", stdout);
+							this.currentApp = stdout;
 						}
 					}
 				}
@@ -675,18 +779,27 @@ class ADBPlugin {
 		}
 	}
 
-	connect(callback) {
+	connect(callback, done) {
 		var that = this;
 		var error = function() {
 			that.log.info(`${that.name} - Device disconnected? Trying to reconnect.`);
 		}
 
-		this.displayDebug(`connect`);
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
+			if(err) {
+				error();
+				that.displayDebug('connect - disconnect - ' + stderr.trim());
+			}
+
 			exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-				if(err) error();
+				if(err) {
+					error();
+					that.displayDebug('connect - connect -' + stderr.trim());
+				}
 				else if(callback) callback();
 			});
+
+			if(done) done();
 		});
 	}
 
