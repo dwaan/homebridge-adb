@@ -71,6 +71,24 @@
 								{ "title": "No", "enum": ["false"] }
 					        ]
 						},
+						"playbacksensorexclude": {
+							"type": "string",
+							"title": "Exclude this app from Playback Sensor",
+							"placeholder": "Exclude this app from Playback Sensor",
+					        "type": "string",
+							"default": ""
+						},
+						"debug": {
+							"type": "string",
+							"title": "Display more debug message",
+							"placeholder": "Display more debug message",
+					        "type": "boolean",
+							"default": "true",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
 						"backbutton": {
 							"type": "string",
 							"title": "Back Button",
@@ -167,7 +185,35 @@
 							"flex-direction": "row",
 							"items": [
 								{
-									"key": "accessories[].playbacksensor"
+									"key": "accessories[].debug"
+								}
+							]
+						},
+						{
+							"title": "Playback Sensor",
+							"expandable": true,
+							"expanded": false,
+							"description": "Create motion sensor based on media playback activities",
+							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].playbacksensor"
+										}
+									]
+								},
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].playbacksensorexclude"
+										}
+									]
 								}
 							]
 						},
