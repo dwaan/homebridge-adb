@@ -2,7 +2,7 @@
 name: Playback Sensor Support
 about: Playback Sensor Support for Your Device
 title: ''
-labels: ''
+labels: playback sensor
 assignees: ''
 
 ---
