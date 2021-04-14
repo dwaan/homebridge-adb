@@ -768,7 +768,7 @@ class ADBPlugin {
 							}
 
 							this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
-							this.log.info(this.name, "- Current app -", stdout);
+							this.log.info(this.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
 							this.currentApp = stdout;
 						}
 					}
@@ -851,7 +851,7 @@ class ADBPlugin {
 	}
 
 	displayDebug(text){
-		if(this.debug) this.log.debug(`${this.name} - ${text}`);
+		if(this.debug) this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
 	}
 }
 
