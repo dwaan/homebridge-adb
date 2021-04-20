@@ -32,7 +32,7 @@ class ADBPlugin {
 		// IP
 		this.ip = this.config.ip;
 		if(!this.ip) {
-			this.log.error("\nPlease provide IP for this accessory: ${this.name}\n");
+			this.log.error(`\n\nPlease provide IP for this accessory: ${this.name}\n`);
 			return;
 		}
 		// Interval
