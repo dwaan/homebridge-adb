@@ -41,9 +41,12 @@ class ADBPlugin {
 		if(this.interval < 300) this.interval = 300;
 		// Inputs
 		this.inputs = this.config.inputs;
+		this.hidenumber = this.config.hidenumber;
+		this.hidehome = this.config.hidehome;
+		this.hideother = this.config.hideother;
 		if(!this.inputs) this.inputs = [];
-		this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
-		this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
+		if(!this.hidehome) this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
+		if(!this.hideother) this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 		// Sensor
 		this.playbacksensor =  this.config.playbacksensor;
 		this.playbacksensorexclude =  this.config.playbacksensorexclude;
@@ -231,8 +234,8 @@ class ADBPlugin {
 				currentVisibility = Characteristic.CurrentVisibilityState.SHOWN,
 				name = "";
 
-			if(i == 0) type = Characteristic.InputSourceType.HOME_SCREEN;
-			else if(i == this.inputs.length - 1) type = Characteristic.InputSourceType.OTHER;
+			if(i == 0 && !this.hidehome) type = Characteristic.InputSourceType.HOME_SCREEN;
+			else if(i == this.inputs.length - 1 && !this.hideother) type = Characteristic.InputSourceType.OTHER;
 
 			let humanNumber = i + 1;
 			if(humanNumber < 10) humanNumber = "0" + (i + 1);
@@ -244,7 +247,8 @@ class ADBPlugin {
 				currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
 				name = `${humanNumber}. Hidden Input`;
 			} else {
-				name = `${humanNumber}. ${input.name}`;
+				name = `${input.name}`;
+				if (!this.hidenumber) name = `${humanNumber}. ${name}`;
 			}
 
 			// this.log.info(this.name, name, targetVisibility, currentVisibility);
@@ -364,6 +368,8 @@ class ADBPlugin {
 
 								if(!type.includes(" ") && type.includes("."))
 									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
+								else if (this.inputs[this.currentInputIndex].adb)
+									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
 								else
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].id}"`;
 							}
@@ -410,7 +416,7 @@ class ADBPlugin {
 				if(this.useTail === true) tail = " | tail -1";
 
 				if(!this.noPlaybackSensor) {
-					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout, stderr) => {
+					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${tail}"`, (err, stdout, stderr) => {
 						if(err) {
 							this.displayDebug(`handleMediaStatus - error - using media session`);
 						} else {
@@ -613,7 +619,7 @@ class ADBPlugin {
 					if(err) {
 						this.displayDebug(`checkPlayback - error - checking current media app`);
 					} else if(stdout.includes(this.currentApp)) {
-						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState {state=' ${head}"`, (err, stdout, stderr) => {
+						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState' ${head}"`, (err, stdout, stderr) => {
 							if(err) errorState('media_session');
 							else {
 								stdout = stdout.trim();
@@ -744,7 +750,7 @@ class ADBPlugin {
 							});
 
 							// Other app
-							if(otherApp) {
+							if(otherApp && !this.hideother) {
 								let name = stdout.split("."),
 									humanName = "",
 									i = 0;
@@ -764,7 +770,10 @@ class ADBPlugin {
 
 								this.currentInputIndex = this.inputs.length - 1;
 								if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].id = stdout;
-								if(this.inputs[this.currentInputIndex].service) this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${this.currentInputIndex + 1}. ${humanName}`);
+								if(this.inputs[this.currentInputIndex].service) {
+									if (!this.hidenumber) humanName = `${this.currentInputIndex + 1}. ${humanName}`;
+									this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
+								}
 							}
 
 							this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);

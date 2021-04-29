@@ -98,11 +98,14 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "name": "NVIDIA Shield",
                     "interval": 1000,
                     "ip": "192.168.1.106",
-		    "playbacksensor": true,
+		    		"playbacksensor": true,
                     "playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
                     "backbutton": "KEYCODE_BACK",
                     "infobutton": "KEYCODE_HOME",
                     "category": "TV_STREAMING_STICK",
+                    "hidenumber": true,
+                    "hidehome": true,
+                    "hideother": true,
                     "debug": true,
                     "inputs": [
                         {
@@ -118,7 +121,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                 {
                     "name": "Meizu",
                     "ip": "192.168.1.121",
-		    "playbacksensor": false,
+		    		"playbacksensor": false,
                     "inputs": [
                         {
                             "name": "Termux",
@@ -141,6 +144,9 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.
 * *infobutton*, *playpauseobutton*, *backbutton* (optional): assign custom key event code for Remote control in iOS Control Center, see [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the key codes.
+* *hidenumber* (optional): if set to *true*, plugin will hide number inputs in Home App.
+* *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
+* *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 * *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
 

@@ -83,7 +83,7 @@
 							"title": "Display more debug message",
 							"placeholder": "Display more debug message",
 					        "type": "boolean",
-							"default": "true",
+							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -126,13 +126,52 @@
 										"required": true
 									},
 									"id": {
-										"title": "App ID or ADB Command",
+										"title": "App ID",
 										"type": "string",
-										"placeholder": "App ID (com.your.app.id) or ADB command",
+										"placeholder": "App ID (com.your.app.id)",
 										"required": true
+									},
+									"adb": {
+										"title": "Command",
+										"type": "string",
+										"placeholder": "ADB command",
+										"required": false
 									}
 								}
 							}
+						},
+						"hidenumber": {
+							"type": "string",
+							"title": "Hide number inputs in Home App",
+							"placeholder": "Hide number from inputs list in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
+						"hidehome": {
+							"type": "string",
+							"title": "Hide 'Home' input in Home App",
+							"placeholder": "Hide 'Home' input in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
+						"hideother": {
+							"type": "string",
+							"title": "Hide 'Other' input in Home App",
+							"placeholder": "Hide 'Other' input in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
 						}
 					}
 				}
@@ -256,26 +295,45 @@
 							]
 						},
 					    {
-							"key": "accessories[].inputs",
-					    	"type": "array",
+							"title": "Inputs",
 							"expandable": true,
 							"expanded": false,
 							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID.",
 							"items": [
 								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
+									"title": "List",
+									"key": "accessories[].inputs",
+							    	"type": "array",
 									"items": [
 										{
-											"key": "accessories[].inputs[].name",
-											"flex": "3 3 70px"
-										},
-										{
-											"key": "accessories[].inputs[].id",
-											"flex": "5 5 170px"
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].inputs[].name",
+													"flex": "3 3 70px"
+												},
+												{
+													"key": "accessories[].inputs[].id",
+													"flex": "5 5 170px"
+												},
+												{
+													"key": "accessories[].inputs[].adb",
+													"flex": "5 5 170px"
+												}
+											]
 										}
 									]
+								},
+								{
+									"key": "accessories[].hidenumber"
+								},
+								{
+									"key": "accessories[].hidehome"
+								},
+								{
+									"key": "accessories[].hideother"
 								}
 							]
 					    }
