@@ -48,9 +48,14 @@ class ADBPlugin {
 		if(!this.hidehome) this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
 		if(!this.hideother) this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 		// Sensor
-		this.playbacksensor =  this.config.playbacksensor;
+		this.playbacksensor = this.config.playbacksensor;
 		this.playbacksensorexclude =  this.config.playbacksensorexclude;
 		if(!this.playbacksensorexclude) this.playbacksensorexclude = "";
+		// Power ON/OFF
+		this.poweron = this.config.poweron;
+		this.poweroff = this.config.poweroff;
+		if(!this.poweron) this.poweron = "KEYCODE_POWER";
+		if(!this.poweroff) this.poweroff = this.poweron;
 		// Category
 		this.category = "TELEVISION";
 		if(this.config.category) this.category = this.config.category.toUpperCase();
@@ -122,15 +127,19 @@ class ADBPlugin {
 		// this.handleMediaStates();
 
 		if(!this.isSpeaker()) {
-			// Handle input
+			// Handle On Off
 			this.handleOnOff();
-			this.handleInput();
+
+			// Handle input
+			if(this.inputs.length > 0) {
+				this.createInputs();
+				this.handleInputs();
+			}
 
 			// Show Control Center Remote if needed
 			this.handleRemoteControl();
 
 			// Create additional services
-			this.createInputs();
 			this.createTelevisionSpeakers();
 		}
 
@@ -312,23 +321,22 @@ class ADBPlugin {
 		this.deviceService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
 				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-					if(!err) {
+					if(!err && state != this.awake) {
 						if(state) {
-							// When it sleep, wake it up
-							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_WAKEUP"`, (err, stdout, stderr) => {
+							exec(`adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, (err, stdout, stderr) => {
 								if(err) {
 									this.log.info(this.name, "- Can't make device wakeup");
 									this.displayDebug("handleOnOff - Error - " + stderr.trim());
-								} else this.displayDebug("Awake");
+								} else this.displayDebug("On");
 
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
-							exec(`adb -s ${this.ip} shell "input keyevent KEYCODE_SLEEP"`, (err, stdout, stderr) => {
+							exec(`adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`, (err, stdout, stderr) => {
 								if(err) {
 									this.log.info(this.name, "- Can't make device sleep");
 									this.displayDebug("handleOnOff - Error - " + stderr.trim());
-								} else this.displayDebug("Sleeping");
+								} else this.displayDebug("Off");
 
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
@@ -350,7 +358,7 @@ class ADBPlugin {
 			});
 	}
 
-	handleInput() {
+	handleInputs() {
 		// handle [input source]
 		this.deviceService.getCharacteristic(Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
@@ -377,11 +385,11 @@ class ADBPlugin {
 							exec(adb, (err, stdout, stderr) => {
 								if(!err) {
 									this.currentApp = this.inputs[this.currentInputIndex].id;
-									this.log.info(this.name, "- handleInput -", this.inputs[this.currentInputIndex].name);
-								} else this.log.info(this.name, "- handleInput - Can't open -", this.inputs[this.currentInputIndex].name);
+									this.log.info(this.name, "- handleInputs -", this.inputs[this.currentInputIndex].name);
+								} else this.log.info(this.name, "- handleInputs - Can't open -", this.inputs[this.currentInputIndex].name);
 							});
 						} else {
-							this.log.info(this.name, "- handleInput - Device not responding");
+							this.log.info(this.name, "- handleInputs - Device not responding");
 						}
 
 						this.currentAppOnProgress = false;
@@ -416,7 +424,7 @@ class ADBPlugin {
 				if(this.useTail === true) tail = " | tail -1";
 
 				if(!this.noPlaybackSensor) {
-					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${tail}"`, (err, stdout, stderr) => {
+					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout, stderr) => {
 						if(err) {
 							this.displayDebug(`handleMediaStatus - error - using media session`);
 						} else {
@@ -613,21 +621,18 @@ class ADBPlugin {
 
 				this.checkPlaybackProgress = true;
 
-				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'Media button session is'"`, (err, stdout, stderr) => {
+				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep -e 'Media button session is' -e 'AlexaMediaPlayerRuntime'"`, (err, stdout, stderr) => {
 					stdout = stdout.trim();
 
 					if(err) {
 						this.displayDebug(`checkPlayback - error - checking current media app`);
-					} else if(stdout.includes(this.currentApp)) {
-						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState' ${head}"`, (err, stdout, stderr) => {
+					} else if(this.currentApp == HOME_APP_ID || this.currentApp != OTHER_APP_ID || stdout.includes(this.currentApp) || stdout.includes('AlexaMediaPlayerRuntime')) {
+						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState'"`, (err, stdout, stderr) => {
 							if(err) errorState('media_session');
 							else {
 								stdout = stdout.trim();
 
 								if(stdout != "") {
-									stdout = stdout.split("\n");
-									stdout = stdout[0].trim();
-
 									if(stdout.includes("state=3")) {
 										if(!this.playing) {
 											state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
@@ -736,47 +741,52 @@ class ADBPlugin {
 							if(stdout[0] == undefined) stdout[0] = HOME_APP_ID;
 							if(stdout[1] == undefined) stdout[1] = "";
 
-							if(stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity")) stdout = this.inputs[0].id;
+							if(!this.hidehome && (stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity"))) stdout = this.inputs[0].id;
 							else stdout = stdout[0];
 						} else stdout = OTHER_APP_ID;
 
-						if(this.inputs[this.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
-							this.inputs.forEach((input, i) => {
-								// Home or registered app
-								if(stdout == input.id) {
-									this.currentInputIndex = i;
-									otherApp = false;
-								}
-							});
+						if(this.inputs.length > 0) {
+							if(this.inputs[this.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
+								this.inputs.forEach((input, i) => {
+									// Home or registered app
+									if(stdout == input.id) {
+										this.currentInputIndex = i;
+										otherApp = false;
+									}
+								});
 
-							// Other app
-							if(otherApp && !this.hideother) {
-								let name = stdout.split("."),
-									humanName = "",
-									i = 0;
+								// Other app
+								if(otherApp && !this.hideother) {
+									let name = stdout.split("."),
+										humanName = "",
+										i = 0;
 
-								// Extract human readable name from app package name
-								while(name[i]) {
-									name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
-									if(i > 0)
-										if(name[i] != "Com" && name[i] != "Android")
-											if(name[i] == "Vending") humanName += "Play Store";
-											else if(name[i] == "Gm") humanName += "GMail";
-											else humanName += (" " + name[i]);
-									i++;
-								}
-								humanName = humanName.trim();
-								if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
+									// Extract human readable name from app package name
+									while(name[i]) {
+										name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
+										if(i > 0)
+											if(name[i] != "Com" && name[i] != "Android")
+												if(name[i] == "Vending") humanName += "Play Store";
+												else if(name[i] == "Gm") humanName += "GMail";
+												else humanName += (" " + name[i]);
+										i++;
+									}
+									humanName = humanName.trim();
+									if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
-								this.currentInputIndex = this.inputs.length - 1;
-								if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].id = stdout;
-								if(this.inputs[this.currentInputIndex].service) {
-									if (!this.hidenumber) humanName = `${this.currentInputIndex + 1}. ${humanName}`;
-									this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
+									this.currentInputIndex = this.inputs.length - 1;
+									if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].id = stdout;
+									if(this.inputs[this.currentInputIndex].service) {
+										if (!this.hidenumber) humanName = `${this.currentInputIndex + 1}. ${humanName}`;
+										this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
+									}
 								}
+
+								this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
 							}
+						}
 
-							this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
+						if(this.currentApp != stdout) {
 							this.log.info(this.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
 							this.currentApp = stdout;
 						}

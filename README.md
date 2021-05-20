@@ -122,6 +122,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "name": "Meizu",
                     "ip": "192.168.1.121",
 		    		"playbacksensor": false,
+		    		"poweron": "KEYCODE_POWER",
                     "inputs": [
                         {
                             "name": "Termux",
@@ -140,6 +141,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **platform** (mandatory): the name of this plugin.
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
+* *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you live this black, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.
 * *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.
@@ -148,7 +150,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
 * *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 * *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
-* *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log.
+* *poweron*, *poweroff* (optional): assign csutom key event code for Power on/off, you can use KEYCODE_POWER or combination of KEYCODE_AWAKE/KEYCODE_SLEEP. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the other key codes that might more suitable for your device.
 
 
 ## ADB command that this script use

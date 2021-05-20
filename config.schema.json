@@ -172,6 +172,20 @@
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
 					        ]
+						},
+						"poweron": {
+							"type": "string",
+							"title": "Power On Keycode",
+							"placeholder": "Type your power on keycode",
+					        "type": "string",
+							"default": "KEYCODE_POWER"
+						},
+						"poweroff": {
+							"type": "string",
+							"title": "Power Off Keycode",
+							"placeholder": "Type your power off keycode",
+					        "type": "string",
+							"default": "KEYCODE_POWER"
 						}
 					}
 				}
@@ -257,10 +271,10 @@
 							]
 						},
 						{
-							"title": "Control Center Remote",
+							"title": "Control Center Remote KeyCode",
 							"expandable": true,
 							"expanded": false,
-							"description": "For list of Key Event code visit: https://developer.android.com/reference/android/view/KeyEvent",
+							"description": "Use costum keycode for control center remote.",
 							"items": [
 								{
 									"type": "flex",
@@ -290,6 +304,30 @@
 										{
 											"key": "accessories[].infobutton"
 										}
+									]
+								}
+							]
+						},
+						{
+							"title": "Power KeyCode",
+							"expandable": true,
+							"expanded": false,
+							"description": "Use costum keycode to power on/off your device.",
+							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].poweron",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].poweroff",
+											"flex": "1 1 100px"
+										}
+
 									]
 								}
 							]
