@@ -142,6 +142,9 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you live this black, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.
+	* *name* (mandatory): the name of the input
+	* *id* (mandatory): the application id
+	* *adb* (optional): you can run you own adb shell command here, such as: `monkey -p com.app.id 1`
 * *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.

@@ -249,8 +249,8 @@ class ADBPlugin {
 			let humanNumber = i + 1;
 			if(humanNumber < 10) humanNumber = "0" + (i + 1);
 
-			if(i >= this.inputs.length) {
-				// Create hidden input for future modification
+			if(i >= this.inputs.length || !input.name || !input.id) {
+				// Create hidden input when name and id is empty and for future modification
 				configured = Characteristic.IsConfigured.NOT_CONFIGURED;
 				targetVisibility = Characteristic.TargetVisibilityState.HIDDEN;
 				currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
@@ -341,9 +341,11 @@ class ADBPlugin {
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						}
-					} else {
+					} else if(err) {
 						this.log.info(this.name, "- Device not responding");
 						this.displayDebug("handleOnOff - Error - " + stderr.trim());
+					} else {
+						this.deviceService.updateCharacteristic(Characteristic.Active, state);
 					}
 				});
 
