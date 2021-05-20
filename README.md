@@ -127,7 +127,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                         {
                             "name": "Termux",
                             "id": "com.termux",
-			    "adb": "monkey -p com.termux 1"
+                            "adb": "monkey -p com.termux 1"
                         },
                         {
                             "name": "Apple Music",
