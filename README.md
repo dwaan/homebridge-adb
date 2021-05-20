@@ -98,7 +98,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "name": "NVIDIA Shield",
                     "interval": 1000,
                     "ip": "192.168.1.106",
-		    		"playbacksensor": true,
+		    "playbacksensor": true,
                     "playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
                     "backbutton": "KEYCODE_BACK",
                     "infobutton": "KEYCODE_HOME",
@@ -121,12 +121,13 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                 {
                     "name": "Meizu",
                     "ip": "192.168.1.121",
-		    		"playbacksensor": false,
-		    		"poweron": "KEYCODE_POWER",
+		    "playbacksensor": false,
+		    "poweron": "KEYCODE_POWER",
                     "inputs": [
                         {
                             "name": "Termux",
-                            "id": "com.termux"
+                            "id": "com.termux",
+			    "adb": "monkey -p com.termux 1"
                         },
                         {
                             "name": "Apple Music",
