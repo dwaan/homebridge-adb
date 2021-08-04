@@ -107,6 +107,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "hidehome": true,
                     "hideother": true,
                     "debug": true,
+					"skipSpeaker": false,
                     "inputs": [
                         {
                             "name": "HBO Now",
@@ -154,6 +155,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
 * *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 * *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
+* *skipSpeaker* (optional): if set to *true*, an accompanying speaker will not be initialized for the device.
 * *poweron*, *poweroff* (optional): assign csutom key event code for Power on/off, you can use KEYCODE_POWER or combination of KEYCODE_AWAKE/KEYCODE_SLEEP. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the other key codes that might more suitable for your device.
 
 

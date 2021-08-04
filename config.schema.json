@@ -89,6 +89,17 @@
 								{ "title": "No", "enum": ["false"] }
 					        ]
 						},
+						"skipSpeaker": {
+							"type": "string",
+							"title": "Skip speaker creation",
+							"placeholder": "Skip speaker creation",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
 						"backbutton": {
 							"type": "string",
 							"title": "Back Button",

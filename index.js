@@ -27,6 +27,7 @@ class ADBPlugin {
 
 		// Configuration
 		this.debug = this.config.debug || false;
+		this.skipSpeaker = this.config.skipSpeaker || false;
 		// Name
 		this.name = this.config.name || 'Android Device';
 		// IP
@@ -140,7 +141,9 @@ class ADBPlugin {
 			this.handleRemoteControl();
 
 			// Create additional services
-			this.createTelevisionSpeakers();
+			if(!this.skipSpeaker) {
+				this.createTelevisionSpeakers();
+			}
 		}
 
 		// add playback sensor
