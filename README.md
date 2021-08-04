@@ -107,7 +107,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "hidehome": true,
                     "hideother": true,
                     "debug": true,
-					"skipSpeaker": false,
+                    "skipSpeaker": false,
                     "inputs": [
                         {
                             "name": "HBO Now",

@@ -250,6 +250,9 @@
 							"items": [
 								{
 									"key": "accessories[].debug"
+								},
+								{
+									"key": "accessories[].skipSpeaker"
 								}
 							]
 						},
