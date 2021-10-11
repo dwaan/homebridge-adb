@@ -379,10 +379,10 @@ class ADBPlugin {
 							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].id != OTHER_APP_ID) {
 								let type = this.inputs[this.currentInputIndex].id.trim();
 
-								if(!type.includes(" ") && type.includes("."))
-									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
-								else if (this.inputs[this.currentInputIndex].adb)
+								if (this.inputs[this.currentInputIndex].adb)
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
+								else if(!type.includes(" ") && type.includes("."))
+									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
 								else
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].id}"`;
 							}
