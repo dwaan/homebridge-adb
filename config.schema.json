@@ -60,6 +60,66 @@
 								{ "title": "Speaker", "enum": ["SPEAKER"] }
 					        ]
 						},
+						"inputs": {
+							"title": "Inputs",
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"title": "Name",
+										"type": "string",
+										"placeholder": "Your apps name",
+										"required": true
+									},
+									"id": {
+										"title": "App ID",
+										"type": "string",
+										"placeholder": "App ID (com.your.app.id)",
+										"required": true
+									},
+									"adb": {
+										"title": "or, Command",
+										"type": "string",
+										"placeholder": "ADB command",
+										"required": false
+									}
+								}
+							}
+						},
+						"hidenumber": {
+							"type": "string",
+							"title": "Hide number inputs in Home App",
+							"placeholder": "Hide number from inputs list in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
+						"hidehome": {
+							"type": "string",
+							"title": "Hide 'Home' input in Home App",
+							"placeholder": "Hide 'Home' input in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
+						"hideother": {
+							"type": "string",
+							"title": "Hide 'Other' input in Home App",
+							"placeholder": "Hide 'Other' input in Home App",
+					        "type": "boolean",
+							"default": "",
+					        "oneOf": [
+								{ "title": "Yes", "enum": ["true"] },
+								{ "title": "No", "enum": ["false"] }
+					        ]
+						},
 						"playbacksensor": {
 							"type": "string",
 							"title": "Playback as Motion Sensor",
@@ -124,66 +184,6 @@
 							"minLength": 9,
 							"default": "KEYCODE_HOME"
 						},
-						"inputs": {
-							"title": "Inputs",
-							"type": "array",
-							"items": {
-								"type": "object",
-								"properties": {
-									"name": {
-										"title": "Name",
-										"type": "string",
-										"placeholder": "Your apps name",
-										"required": true
-									},
-									"id": {
-										"title": "App ID",
-										"type": "string",
-										"placeholder": "App ID (com.your.app.id)",
-										"required": true
-									},
-									"adb": {
-										"title": "Command",
-										"type": "string",
-										"placeholder": "ADB command",
-										"required": false
-									}
-								}
-							}
-						},
-						"hidenumber": {
-							"type": "string",
-							"title": "Hide number inputs in Home App",
-							"placeholder": "Hide number from inputs list in Home App",
-					        "type": "boolean",
-							"default": "",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
-						},
-						"hidehome": {
-							"type": "string",
-							"title": "Hide 'Home' input in Home App",
-							"placeholder": "Hide 'Home' input in Home App",
-					        "type": "boolean",
-							"default": "",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
-						},
-						"hideother": {
-							"type": "string",
-							"title": "Hide 'Other' input in Home App",
-							"placeholder": "Hide 'Other' input in Home App",
-					        "type": "boolean",
-							"default": "",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
-						},
 						"poweron": {
 							"type": "string",
 							"title": "Power On Keycode",
@@ -210,7 +210,6 @@
 			"items": [
 				{
 					"type": "flex",
-					"displayFlex": true,
 					"items": [
 						{
 							"type": "flex",
@@ -244,15 +243,29 @@
 							]
 						},
 						{
-							"type": "flex",
-							"displayFlex": true,
-							"flex-direction": "row",
+							"title": "Inputs",
+							"key": "accessories[].inputs",
+							"type": "array",
+							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID.",
 							"items": [
 								{
-									"key": "accessories[].debug"
-								},
-								{
-									"key": "accessories[].skipSpeaker"
+									"type": "flex",
+									"displayFlex": false,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].inputs[].name",
+											"flex": "3 3 70px"
+										},
+										{
+											"key": "accessories[].inputs[].id",
+											"flex": "5 5 170px"
+										},
+										{
+											"key": "accessories[].inputs[].adb",
+											"flex": "5 5 170px"
+										}
+									]
 								}
 							]
 						},
@@ -296,7 +309,12 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].playpausebutton"
+											"key": "accessories[].playpausebutton",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].backbutton",
+											"flex": "1 1 100px"
 										}
 									]
 								},
@@ -306,17 +324,8 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].backbutton"
-										}
-									]
-								},
-								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
-									"items": [
-										{
-											"key": "accessories[].infobutton"
+											"key": "accessories[].infobutton",
+											"flex": "1 1 100px"
 										}
 									]
 								}
@@ -347,45 +356,51 @@
 							]
 						},
 					    {
-							"title": "Inputs",
+							"title": "Settings",
 							"expandable": true,
 							"expanded": false,
-							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID.",
+							"description": "Other additional settings.",
 							"items": [
 								{
-									"title": "List",
-									"key": "accessories[].inputs",
-							    	"type": "array",
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
 									"items": [
 										{
-											"type": "flex",
-											"displayFlex": true,
-											"flex-direction": "row",
-											"items": [
-												{
-													"key": "accessories[].inputs[].name",
-													"flex": "3 3 70px"
-												},
-												{
-													"key": "accessories[].inputs[].id",
-													"flex": "5 5 170px"
-												},
-												{
-													"key": "accessories[].inputs[].adb",
-													"flex": "5 5 170px"
-												}
-											]
+											"key": "accessories[].debug",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].skipSpeaker",
+											"flex": "1 1 100px"
 										}
 									]
 								},
 								{
-									"key": "accessories[].hidenumber"
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].hidenumber",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].hidehome",
+											"flex": "1 1 100px"
+										}											
+									]
 								},
 								{
-									"key": "accessories[].hidehome"
-								},
-								{
-									"key": "accessories[].hideother"
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].hideother",
+											"flex": "1 1 100px"
+										}										
+									]
 								}
 							]
 					    }

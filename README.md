@@ -27,15 +27,16 @@ This plugins register it self as external accesorries, so make sure after you ad
 		```
 	*  If you're using Alpine Linux (like the one from of oznu/docker-homebridge), use this command:
 		```
-		apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ add android-tools
+		apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/community/ add android-tools
 		```
+		You can use other version of repo, but I only tested the v3.14 repo, and it seems it's the only adb tools that work with oznu/docker-homebridge .
 	*  For other OS and method please download it in here: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
-	*  When it properly installed, please check your ADB is up and running with this command: 
+	*  When it properly installed, please check your ADB is up and running with this command:
 		```
 		adb version
 		```
 
-* Enable Developer mode in your Android device, visit this documentation to read more  [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
+* Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
 * Some Android device doesn't have remote debug by default. If your device is one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run this command:
 	```

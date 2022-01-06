@@ -77,6 +77,7 @@ class ADBPlugin {
 		this.checkPlaybackProgress = false;
 		this.prevStdout = "";
 		this.limit_retry = LIMIT_RETRY;
+		this.disconnected = false;
 
 		// PLayback
 		this.noPlaybackSensor = false;
@@ -205,7 +206,7 @@ class ADBPlugin {
 					.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 					.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 				this.api.publishExternalAccessories(PLUGIN_NAME, [this.device]);
-				this.log.info(this.name, `- Created`);
+				this.displayDebug(this.name, `- Created`);
 
 				// Publish additional sensor accesories
 				if(this.playbacksensor) {
@@ -214,7 +215,7 @@ class ADBPlugin {
 						.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 						.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 					this.api.publishExternalAccessories(PLUGIN_NAME, [this.devicePlaybackSensor]);
-					this.log.info(this.name, `- Sensor created`);
+					this.displayDebug(this.name, `- Sensor created`);
 				}
 			});
 
@@ -263,7 +264,7 @@ class ADBPlugin {
 				if (!this.hidenumber) name = `${humanNumber}. ${name}`;
 			}
 
-			// this.log.info(this.name, name, targetVisibility, currentVisibility);
+			this.displayDebug(this.name, name, targetVisibility, currentVisibility);
 			let service = this.device.addService(Service.InputSource, `Input - ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
@@ -459,7 +460,7 @@ class ADBPlugin {
 				var state = Characteristic.TargetMediaState.STOP;
 
 				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
-					if(err) this.log.error(this.name, '- Can\'t get media status');
+					if(err) this.displayDebug(this.name, '- Can\'t get media status');
 					else {
 						stdout = stdout.split("\n");
 						stdout = stdout[0].trim();
@@ -493,7 +494,7 @@ class ADBPlugin {
 				}
 
 				exec(`adb -s ${this.ip} shell "media dispatch ${key}"`, (err, stdout, stderr) => {
-					if(err) this.log.error(this.name, '- Can\'t send: ' + key.toUpperCase());
+					if(err) this.log.info(this.name, '- Can\'t send: ' + key.toUpperCase());
 					else this.log.info(this.name, '- Sending: ' + key.toUpperCase());
 				});
 
@@ -806,22 +807,27 @@ class ADBPlugin {
 	connect(callback, done) {
 		var that = this;
 		var error = function() {
-			that.log.info(`${that.name} - Device disconnected? Trying to reconnect.`);
+			if(!that.disconnected) { 
+				that.log.info(`${that.name} - Device disconnected? Trying to reconnect.`);
+				that.disconnected = true;
+			}
 		}
 
 		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
 			if(err) {
 				error();
 				that.displayDebug('connect - disconnect - ' + stderr.trim());
+			} else {
+				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					if(err) {
+						error();
+						that.displayDebug('connect - connect -' + stderr.trim());
+					} else {
+						that.disconnected = false;
+						if(callback) callback();
+					}
+				});
 			}
-
-			exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
-				if(err) {
-					error();
-					that.displayDebug('connect - connect -' + stderr.trim());
-				}
-				else if(callback) callback();
-			});
 
 			if(done) done();
 		});
