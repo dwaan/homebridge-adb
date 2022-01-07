@@ -727,7 +727,7 @@ class ADBPlugin {
 		if(this.awake && !this.currentAppOnProgress) {
 			this.currentAppOnProgress = true;
 
-			exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
+			exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
 				if(err) {
 					this.displayDebug(`checkInput - error`)
 				} else {
