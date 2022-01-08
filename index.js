@@ -738,11 +738,12 @@ class ADBPlugin {
 						let otherApp = true;
 
 						// Identified current focused app
-						this.prevStdout = stdout;
+						this.prevStdout = stdout.trim();
 						if(stdout) {
-							stdout = stdout.split("/");
+							stdout = stdout.trim().split("/");
 							stdout[0] = stdout[0].split(" ");
-							stdout[0] = stdout[0][4];
+							stdout[0] = stdout[0][stdout[0].length - 1];
+							this.log.info("Debug", stdout[0]);
 
 							if(stdout[0] == undefined) stdout[0] = HOME_APP_ID;
 							if(stdout[1] == undefined) stdout[1] = "";
@@ -750,6 +751,7 @@ class ADBPlugin {
 							if(!this.hidehome && (stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity"))) stdout = this.inputs[0].id;
 							else stdout = stdout[0];
 						} else stdout = OTHER_APP_ID;
+
 
 						if(this.inputs.length > 0) {
 							if(this.inputs[this.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
