@@ -187,6 +187,12 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	adb -s your-device-ip shell "monkey -p package.name 1"
 	```
 * To know current on screen app
+
+	New:
+	```
+	adb -s your-device-ip shell "dumpsys activity activities | grep ' ResumedActivity'"
+	```
+	Old:
 	```
 	adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"
 	```
