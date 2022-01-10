@@ -831,7 +831,7 @@ class ADBPlugin {
 				});
 			} else if(this.checkInputDisplayError) {
 				this.checkInputDisplayError = false;
-				that.log.info(`${that.name} - Can't read current app log from device, please report this error.`);
+				that.log.info(`${that.name} - Can't read current app log from device, please discuss this error here https://github.com/dwaan/homebridge-adb/issues/66`);
 			}
 		}
 	}
