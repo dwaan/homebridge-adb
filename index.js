@@ -79,10 +79,18 @@ class ADBPlugin {
 		this.limit_retry = LIMIT_RETRY;
 		this.disconnected = false;
 
-		// PLayback
+		// Playback
 		this.noPlaybackSensor = false;
 		this.useTail = undefined;
 		this.useHead = undefined;
+
+		// Check Input
+		this.checkInputDisplayError = true;
+		this.checkInputUseActivities = true;
+		this.checkInputUseWindows = true; 
+
+		// Debug
+		this.prevDebugMessage = "";
 
 
 		/**
@@ -723,86 +731,108 @@ class ADBPlugin {
 		}
 	}
 
-	checkInput(callback) {
-		if(this.awake && !this.currentAppOnProgress) {
-			this.currentAppOnProgress = true;
+	checkInput() {
+		var that = this;
+		var parseInput = function(stdout) {
+			if(!stdout) stdout = "";
+			stdout = stdout.trim();
 
-			exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
-				if(err) {
-					this.displayDebug(`checkInput - error`)
-				} else {
-					if(!stdout) stdout = "";
-					stdout = stdout.trim();
+			if(stdout != that.prevStdout) {
+				let otherApp = true;
 
-					if(stdout != this.prevStdout) {
-						let otherApp = true;
+				// Identified current focused app
+				that.prevStdout = stdout.trim();
+				if(stdout) {
+					stdout = stdout.trim().split("/");
+					stdout[0] = stdout[0].split(" ");
+					stdout[0] = stdout[0][stdout[0].length - 1];
 
-						// Identified current focused app
-						this.prevStdout = stdout.trim();
-						if(stdout) {
-							stdout = stdout.trim().split("/");
-							stdout[0] = stdout[0].split(" ");
-							stdout[0] = stdout[0][stdout[0].length - 1];
-							this.log.info("Debug", stdout[0]);
+					if(stdout[0] == undefined) stdout[0] = HOME_APP_ID;
+					if(stdout[1] == undefined) stdout[1] = "";
 
-							if(stdout[0] == undefined) stdout[0] = HOME_APP_ID;
-							if(stdout[1] == undefined) stdout[1] = "";
+					if(!that.hidehome && (stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity"))) stdout = that.inputs[0].id;
+					else stdout = stdout[0];
+				} else stdout = OTHER_APP_ID;
 
-							if(!this.hidehome && (stdout[1].includes("Launcher") || stdout[1].substr(0, 13) == ".MainActivity" || stdout[1].includes("RecentsTvActivity"))) stdout = this.inputs[0].id;
-							else stdout = stdout[0];
-						} else stdout = OTHER_APP_ID;
+				if(that.inputs.length > 0) {
+					if(that.inputs[that.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || that.inputs[that.currentInputIndex].type !== 'command')) {
+						that.inputs.forEach((input, i) => {
+							// Home or registered app
+							if(stdout == input.id) {
+								that.currentInputIndex = i;
+								otherApp = false;
+							}
+						});
 
+						// Other app
+						if(otherApp && !that.hideother) {
+							let name = stdout.split("."),
+								humanName = "",
+								i = 0;
 
-						if(this.inputs.length > 0) {
-							if(this.inputs[this.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
-								this.inputs.forEach((input, i) => {
-									// Home or registered app
-									if(stdout == input.id) {
-										this.currentInputIndex = i;
-										otherApp = false;
-									}
-								});
+							// Extract human readable name from app package name
+							while(name[i]) {
+								name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
+								if(i > 0)
+									if(name[i] != "Com" && name[i] != "Android")
+										if(name[i] == "Vending") humanName += "Play Store";
+										else if(name[i] == "Gm") humanName += "GMail";
+										else humanName += (" " + name[i]);
+								i++;
+							}
+							humanName = humanName.trim();
+							if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
-								// Other app
-								if(otherApp && !this.hideother) {
-									let name = stdout.split("."),
-										humanName = "",
-										i = 0;
-
-									// Extract human readable name from app package name
-									while(name[i]) {
-										name[i] = name[i].charAt(0).toUpperCase() + name[i].slice(1);
-										if(i > 0)
-											if(name[i] != "Com" && name[i] != "Android")
-												if(name[i] == "Vending") humanName += "Play Store";
-												else if(name[i] == "Gm") humanName += "GMail";
-												else humanName += (" " + name[i]);
-										i++;
-									}
-									humanName = humanName.trim();
-									if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
-
-									this.currentInputIndex = this.inputs.length - 1;
-									if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].id = stdout;
-									if(this.inputs[this.currentInputIndex].service) {
-										if (!this.hidenumber) humanName = `${this.currentInputIndex + 1}. ${humanName}`;
-										this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
-									}
-								}
-
-								this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
+							that.currentInputIndex = that.inputs.length - 1;
+							if(that.inputs[that.currentInputIndex]) that.inputs[that.currentInputIndex].id = stdout;
+							if(that.inputs[that.currentInputIndex].service) {
+								if (!that.hidenumber) humanName = `${that.currentInputIndex + 1}. ${humanName}`;
+								that.inputs[that.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
 							}
 						}
 
-						if(this.currentApp != stdout) {
-							this.log.info(this.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
-							this.currentApp = stdout;
-						}
+						that.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, that.currentInputIndex);
 					}
 				}
 
-				this.currentAppOnProgress = false;
-			});
+				if(that.currentApp != stdout) {
+					that.log.info(that.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
+					that.currentApp = stdout;
+				}
+			}
+		}
+
+		if(this.awake && !this.currentAppOnProgress) {
+			this.currentAppOnProgress = true;
+
+			if(this.useActivities) {
+				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
+					if(err) {
+						this.displayDebug(`checkInput - error while using dumpsys activity`);
+						this.checkInputUseActivities = false
+					} else {
+						this.displayDebug(`checkInput - using dumpsys activity`);
+						parseInput(stdout);
+					}
+
+					this.currentAppOnProgress = false;
+				});
+			} else if(this.checkInputUseWindows) {
+				exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
+					if(err) {
+						this.displayDebug(`checkInput - error while using dumpsys window`);
+						this.checkInputUseWindows = false
+					} else {
+						this.displayDebug(`checkInput - using dumpsys window`);
+						parseInput(stdout);
+					}
+
+					this.currentAppOnProgress = false;
+				});
+			} else if(this.checkInputDisplayError) {
+				this.checkInputDisplayError = false;
+				that.log.info(`${that.name} - Can't read current app log from device, please report this error.`);
+			}
 		}
 	}
 
@@ -883,7 +913,10 @@ class ADBPlugin {
 	}
 
 	displayDebug(text){
-		if(this.debug) this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+		if(this.debug && this.prevDebugMessage != text) {
+			this.prevDebugMessage = text;
+			this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+		}
 	}
 }
 
