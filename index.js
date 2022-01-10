@@ -805,7 +805,7 @@ class ADBPlugin {
 		if(this.awake && !this.currentAppOnProgress) {
 			this.currentAppOnProgress = true;
 
-			if(this.useActivities) {
+			if(this.checkInputUseActivities) {
 				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys activity`);
