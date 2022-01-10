@@ -809,7 +809,7 @@ class ADBPlugin {
 				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys activity`);
-						this.checkInputUseActivities = false
+						this.checkInputUseActivities = false;
 					} else {
 						this.displayDebug(`checkInput - using dumpsys activity`);
 						parseInput(stdout);
@@ -821,7 +821,7 @@ class ADBPlugin {
 				exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys window`);
-						this.checkInputUseWindows = false
+						this.checkInputUseWindows = false;
 					} else {
 						this.displayDebug(`checkInput - using dumpsys window`);
 						parseInput(stdout);
