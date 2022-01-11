@@ -51,7 +51,10 @@ class ADBPlugin {
 		// Sensor
 		this.playbacksensor = this.config.playbacksensor;
 		this.playbacksensorexclude =  this.config.playbacksensorexclude;
+		this.playbacksensordelay = this.config.playbacksensordelay;
 		if(!this.playbacksensorexclude) this.playbacksensorexclude = "";
+		if(!this.playbacksensordelay) this.playbacksensordelay = 0;
+		this.playbacksensortimeout = false;
 		// Power ON/OFF
 		this.poweron = this.config.poweron;
 		this.poweroff = this.config.poweroff;
@@ -86,8 +89,8 @@ class ADBPlugin {
 
 		// Check Input
 		this.checkInputDisplayError = true;
-		this.checkInputUseActivities = true;
-		this.checkInputUseWindows = true; 
+		this.checkInputUseActivities = 0;
+		this.checkInputUseWindows = 0; 
 
 		// Debug
 		this.prevDebugMessage = "";
@@ -616,18 +619,21 @@ class ADBPlugin {
 			if(!this.noPlaybackSensor) {
 				var changeState = function(state, stdout) {
 					if(changed) {
-						if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
-						that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
-						that.displayDebug(`checkPlayback - ${that.playing}`);
-						that.log.info(`Media playing - ${that.playing}`);
-						that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
+						that.playbacksrsensortimeout = setTimeout(function() {
+							if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
+							that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
+							that.displayDebug(`checkPlayback - ${that.playing}`);
+							that.log.info(`Media playing - ${that.playing}`);
+							that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
+						}, that.playbacksensordelay);
 					}
-					that.checkPlaybackProgress = false;
+
+					that.checkPlaybackProgress = false;	
 				}
 				var errorState = function(using) {
-					that.displayDebug(`checkPlayback - error - using ${using}`);
-
 					if(that.playing) {
+						that.displayDebug(`checkPlayback - error - using ${using}`);
+
 						that.playing = false;
 						changed = true;
 					}
@@ -734,7 +740,7 @@ class ADBPlugin {
 	checkInput() {
 		var that = this;
 		var parseInput = function(stdout) {
-			if(!stdout) stdout = "";
+			if(!stdout || stdout == "") return false;
 			stdout = stdout.trim();
 
 			if(stdout != that.prevStdout) {
@@ -799,39 +805,46 @@ class ADBPlugin {
 					that.log.info(that.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
 					that.currentApp = stdout;
 				}
+
 			}
+
+			return true;
 		}
 
 		if(this.awake && !this.currentAppOnProgress) {
 			this.currentAppOnProgress = true;
 
-			if(this.checkInputUseActivities) {
-				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
-					if(err) {
-						this.displayDebug(`checkInput - error while using dumpsys activity`);
-						this.checkInputUseActivities = false;
-					} else {
-						this.displayDebug(`checkInput - using dumpsys activity`);
-						parseInput(stdout);
-					}
-
-					this.currentAppOnProgress = false;
-				});
-			} else if(this.checkInputUseWindows) {
+			if(this.checkInputUseWindows >= 0) {
 				exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys window`);
-						this.checkInputUseWindows = false;
+						this.checkInputUseWindows = -1;
 					} else {
 						this.displayDebug(`checkInput - using dumpsys window`);
-						parseInput(stdout);
+						this.checkInputUseWindows = parseInput(stdout) ? 1 : -1;
 					}
 
 					this.currentAppOnProgress = false;
 				});
-			} else if(this.checkInputDisplayError) {
+			} 
+
+			if(this.checkInputUseWindows < 0 && this.checkInputUseActivities >= 0) {
+				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
+					if(err) {
+						this.displayDebug(`checkInput - error while using dumpsys activity`);
+						this.checkInputUseActivities = -1;
+					} else {
+						this.displayDebug(`checkInput - using dumpsys activity`);
+						this.checkInputUseActivities = parseInput(stdout) ? 1 : -1;
+					}
+
+					this.currentAppOnProgress = false;
+				});
+			}
+			
+			if(this.checkInputUseActivities < 0 && this.checkInputUseWindows < 0 && this.checkInputDisplayError) {
 				this.checkInputDisplayError = false;
-				that.log.info(`${that.name} - Can't read current app log from device, please discuss this error here https://github.com/dwaan/homebridge-adb/issues/66`);
+				that.log.info(`${that.name} - Can't read current app from device, please report this error: https://github.com/dwaan/homebridge-adb/issues/66`);
 			}
 		}
 	}

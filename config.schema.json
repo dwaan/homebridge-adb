@@ -18,7 +18,6 @@
 							"type": "string",
 							"title": "Device Name",
 							"placeholder": "Type your device name",
-							"type": "string",
 							"minLength": 1,
 							"required": true
 						},
@@ -26,7 +25,6 @@
 							"type": "string",
 							"title": "Device IP",
 							"placeholder": "Type your device IP address",
-							"type": "string",
 							"format": "ipv4",
 							"required": true
 						},
@@ -34,7 +32,6 @@
 							"type": "number",
 							"title": "Polling interval",
 							"placeholder": "Check your device every n miliseconds",
-							"type": "number",
 							"default": "5000",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
@@ -49,7 +46,6 @@
 							"type": "string",
 							"title": "Category",
 							"placeholder": "Pick a category that suitable for your",
-							"type": "string",
 							"default": "TELEVISION",
 					        "oneOf": [
 								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
@@ -88,10 +84,9 @@
 							}
 						},
 						"hidenumber": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Hide number inputs in Home App",
 							"placeholder": "Hide number from inputs list in Home App",
-					        "type": "boolean",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
@@ -99,10 +94,9 @@
 					        ]
 						},
 						"hidehome": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Hide 'Home' input in Home App",
 							"placeholder": "Hide 'Home' input in Home App",
-					        "type": "boolean",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
@@ -110,10 +104,9 @@
 					        ]
 						},
 						"hideother": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Hide 'Other' input in Home App",
 							"placeholder": "Hide 'Other' input in Home App",
-					        "type": "boolean",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
@@ -124,25 +117,36 @@
 							"type": "string",
 							"title": "Playback as Motion Sensor",
 							"placeholder": "Playback as Motion Sensor",
-					        "type": "boolean",
 							"default": "true",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
 					        ]
 						},
+						"playbacksensordelay": {
+							"type": "number",
+							"title": "Playback as Motion Sensor delay",
+							"placeholder": "Playback as Motion Sensor delay",
+							"default": "500",
+					        "oneOf": [
+								{ "title": "500", "enum": ["500"] },
+								{ "title": "1000", "enum": ["1000"] },
+								{ "title": "2500", "enum": ["2500"] },
+								{ "title": "5000", "enum": ["5000"] },
+								{ "title": "7500", "enum": ["7500"] },
+								{ "title": "10000", "enum": ["10000"] }
+					        ]
+						},
 						"playbacksensorexclude": {
 							"type": "string",
-							"title": "Exclude this app from Playback Sensor",
-							"placeholder": "Exclude this app from Playback Sensor",
-					        "type": "string",
+							"title": "Exclude this app from Playback Sensor (ms)",
+							"placeholder": "Exclude this app from Playback Sensor in miliseconds",
 							"default": ""
 						},
 						"debug": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Display more debug message",
 							"placeholder": "Display more debug message",
-					        "type": "boolean",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
@@ -150,10 +154,9 @@
 					        ]
 						},
 						"skipSpeaker": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Skip speaker creation",
 							"placeholder": "Skip speaker creation",
-					        "type": "boolean",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
@@ -164,7 +167,6 @@
 							"type": "string",
 							"title": "Back Button",
 							"placeholder": "Type your custom 'back' key code",
-							"type": "string",
 							"minLength": 9,
 							"default": "KEYCODE_BACK"
 						},
@@ -172,7 +174,6 @@
 							"type": "string",
 							"title": "Play/Pause Button",
 							"placeholder": "Type your custom 'play/pause' key code",
-							"type": "string",
 							"minLength": 9,
 							"default": "KEYCODE_MEDIA_PLAY_PAUSE"
 						},
@@ -180,7 +181,6 @@
 							"type": "string",
 							"title": "Info Button",
 							"placeholder": "Type your custom 'info' key code",
-							"type": "string",
 							"minLength": 9,
 							"default": "KEYCODE_HOME"
 						},
@@ -188,14 +188,12 @@
 							"type": "string",
 							"title": "Power On Keycode",
 							"placeholder": "Type your power on keycode",
-					        "type": "string",
 							"default": "KEYCODE_POWER"
 						},
 						"poweroff": {
 							"type": "string",
 							"title": "Power Off Keycode",
 							"placeholder": "Type your power off keycode",
-					        "type": "string",
 							"default": "KEYCODE_POWER"
 						}
 					}
@@ -281,7 +279,12 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].playbacksensor"
+											"key": "accessories[].playbacksensor",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].playbacksensordelay",
+											"flex": "1 1 100px"
 										}
 									]
 								},
