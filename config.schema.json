@@ -77,7 +77,7 @@
 									"adb": {
 										"title": "or, Command",
 										"type": "string",
-										"placeholder": "ADB command",
+										"placeholder": "eq: monkey -p home 1",
 										"required": false
 									}
 								}

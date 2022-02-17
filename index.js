@@ -391,12 +391,16 @@ class ADBPlugin {
 							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].id != OTHER_APP_ID) {
 								let type = this.inputs[this.currentInputIndex].id.trim();
 
-								if(!type.includes(" ") && type.includes("."))
-									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
-								else if (this.inputs[this.currentInputIndex].adb)
+								if (this.inputs[this.currentInputIndex].adb) {
+									// Run specific custom ADB command
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
-								else
+								} else if(!type.includes(" ") && type.includes(".")) {
+									// Run app based on given valid id
+									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
+								} else {
+									// Run ID as it's an ADB command
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].id}"`;
+								}
 							}
 
 							exec(adb, (err, stdout, stderr) => {
@@ -623,7 +627,7 @@ class ADBPlugin {
 							if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
 							that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
 							that.displayDebug(`checkPlayback - ${that.playing}`);
-							that.log.info(`Media playing - ${that.playing}`);
+							that.log.info(`${that.name} - Media playing - ${that.playing}`);
 							that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
 						}, that.playbacksensordelay);
 					}
