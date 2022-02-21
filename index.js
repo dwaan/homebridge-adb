@@ -140,7 +140,7 @@ class ADBPlugin {
 		this.deviceService.setCharacteristic(Characteristic.ConfiguredName, this.name);
 		if(!this.isSpeaker()) this.deviceService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
-		// Handle volume and media
+		// Handle volume and media - currenty unavailable 
 		// this.handleVolume();
 		// this.handleMediaStatus();
 		// this.handleMediaStates();
@@ -318,8 +318,9 @@ class ADBPlugin {
 				if(state) key = "KEYCODE_VOLUME_DOWN";
 				else key = "KEYCODE_VOLUME_UP";
 
-				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout) => {
+				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
 					if(err) this.log.info(this.name, '- Can\'t set volume');
+					else this.log.info(this.name, '- Sending volume key');
 				});
 
 				callback(null);
@@ -626,6 +627,7 @@ class ADBPlugin {
 
 				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
 					if(err) this.displayDebug(`handleRemoteControl - Can't send: ${key}`);
+					else  this.displayDebug(`handleRemoteControl - Sending: ${key}`);
 				});
 				callback(null);
 			});

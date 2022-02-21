@@ -175,8 +175,8 @@
 						},
 						"skipSpeaker": {
 							"type": "boolean",
-							"title": "Skip speaker creation",
-							"placeholder": "Skip speaker creation",
+							"title": "Skip speaker/volume creation",
+							"placeholder": "Skip speaker/volume creation",
 							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
