@@ -1,6 +1,6 @@
 {
 	"name": "homebridge-adb",
-	"version": "1.5.1",
+	"version": "1.5.2",
 	"description": "A simple homebridge plugin to control ADB enabled Android devices",
 	"main": "index.js",
 	"engines": {
@@ -26,5 +26,8 @@
 	"bugs": {
 		"url": "https://github.com/dwaan/homebridge-adb/issues"
 	},
-	"homepage": "https://github.com/dwaan/homebridge-adb#readme"
+	"homepage": "https://github.com/dwaan/homebridge-adb#readme",
+	"dependencies": {
+		"wake_on_lan": "^1.0.0"
+	}
 }

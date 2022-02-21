@@ -1,3 +1,4 @@
+let wol = require('wake_on_lan');
 let exec = require('child_process').exec;
 let Service, Characteristic, Homebridge, Accessory;
 
@@ -36,10 +37,15 @@ class ADBPlugin {
 			this.log.error(`\n\nPlease provide IP for this accessory: ${this.name}\n`);
 			return;
 		}
+		// Mac
+		this.mac = this.config.mac;
 		// Interval
 		this.interval = this.config.interval || 5000;
 		// Can't be lower than 300 miliseconds, it will flood your network
 		if(this.interval < 300) this.interval = 300;
+		// Exec timeout
+		this.timeout = this.config.timeout || 1000;
+		if(this.timeout < 1000) this.interval = 1000;
 		// Inputs
 		this.inputs = this.config.inputs;
 		this.hidenumber = this.config.hidenumber;
@@ -177,7 +183,7 @@ class ADBPlugin {
 
 			// Check if device have tail and head command
 			if(this.useTail === undefined) {
-				exec(`adb -s ${this.ip} shell "tail --help"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "tail --help"`, (err, stdout) => {
 					if(err) {
 						this.displayDebug(`constructor - can't use tail command, adb will send larger output`);
 						this.useTail = false;
@@ -187,7 +193,7 @@ class ADBPlugin {
 				});
 			}
 			if(this.useHead === undefined) {
-				exec(`adb -s ${this.ip} shell "head --help"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "head --help"`, (err, stdout) => {
 					if(err) {
 						this.displayDebug(`constructor - can't use head command, adb will send larger output`);
 						this.useHead = false;
@@ -198,7 +204,7 @@ class ADBPlugin {
 			}
 
 			// get the accesory information and send it to HB
-			exec(adbCommand, (err, stdout, stderr) => {
+			this.exec(adbCommand, (err, stdout) => {
 				if(err) {
 					var message = "";
 
@@ -312,7 +318,7 @@ class ADBPlugin {
 				if(state) key = "KEYCODE_VOLUME_DOWN";
 				else key = "KEYCODE_VOLUME_UP";
 
-				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout) => {
 					if(err) this.log.info(this.name, '- Can\'t set volume');
 				});
 
@@ -335,34 +341,54 @@ class ADBPlugin {
 		// handle [on / off]
 		this.deviceService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+				let that = this;
+				let tryWOL = function() {
+					wol.wake(`${that.mac}`, { address: `${that.ip}` }, (error) => {
+						that.displayDebug("Trying Wake On LAN, error: " + error);
+						if(error) {
+							that.log.info(that.name, "- Can't make device wakeup using Wake On LAN");
+							that.deviceService.updateCharacteristic(Characteristic.Active, 0);
+						} else {
+							that.displayDebug("Wake On LAN success, your device could be ON now");
+							that.deviceService.updateCharacteristic(Characteristic.Active, 1);
+						}
+					});
+				}
+
+				this.exec(`adb connect ${this.ip}`,(err) => {
 					if(!err && state != this.awake) {
 						if(state) {
-							exec(`adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, (err, stdout, stderr) => {
+							this.exec(`adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, (err, stdout) => {
 								if(err) {
-									this.log.info(this.name, "- Can't make device wakeup");
-									this.displayDebug("handleOnOff - Error - " + stderr.trim());
-								} else this.displayDebug("On");
-
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+									this.log.info(this.name, "- Can't make device wakeup using ADB command");
+									this.displayDebug("handleOnOff - " + stdout);
+								} else {
+									this.displayDebug("On - Using ADB command");
+									this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								}
 							});
 						} else {
-							exec(`adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`, (err, stdout, stderr) => {
+							this.exec(`adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`,(err, stdout) => {
 								if(err) {
 									this.log.info(this.name, "- Can't make device sleep");
-									this.displayDebug("handleOnOff - Error - " + stderr.trim());
-								} else this.displayDebug("Off");
-
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+									this.displayDebug("handleOnOff - " + stdout);
+								} else {
+									this.displayDebug("Off");
+									this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								}
 							});
 						}
 					} else if(err) {
 						this.log.info(this.name, "- Device not responding");
-						this.displayDebug("handleOnOff - Error - " + stderr.trim());
+						this.displayDebug("handleOnOff - Error - " + stdout.trim());
+
+						if(state != this.awake && state) tryWOL();
 					} else {
-						this.deviceService.updateCharacteristic(Characteristic.Active, state);
+						if(err) this.displayDebug("handleOnOff - Time out");
 					}
 				});
+
+				if(state != this.awake && state) tryWOL();
 
 				callback(null);
 			}).on('get', (callback) => {
@@ -382,7 +408,7 @@ class ADBPlugin {
 				if(!this.currentAppOnProgress) {
 					this.currentAppOnProgress = true;
 
-					exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+					this.exec(`adb connect ${this.ip}`, (err) => {
 						if(!err) {
 							let adb = `adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
@@ -394,16 +420,19 @@ class ADBPlugin {
 								if (this.inputs[this.currentInputIndex].adb) {
 									// Run specific custom ADB command
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
+									this.displayDebug(`Running - ADB command - ${this.inputs[this.currentInputIndex].adb}`);
 								} else if(!type.includes(" ") && type.includes(".")) {
 									// Run app based on given valid id
 									adb = `adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
+									this.displayDebug(`Running - App - ${this.inputs[this.currentInputIndex].id}`);
 								} else {
 									// Run ID as it's an ADB command
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].id}"`;
+									this.displayDebug(`Running - ${this.inputs[this.currentInputIndex].id}`);
 								}
 							}
 
-							exec(adb, (err, stdout, stderr) => {
+							this.exec(adb, (err) => {
 								if(!err) {
 									this.currentApp = this.inputs[this.currentInputIndex].id;
 									this.log.info(this.name, "- handleInputs -", this.inputs[this.currentInputIndex].name);
@@ -445,7 +474,7 @@ class ADBPlugin {
 				if(this.useTail === true) tail = " | tail -1";
 
 				if(!this.noPlaybackSensor) {
-					exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout, stderr) => {
+					this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout) => {
 						if(err) {
 							this.displayDebug(`handleMediaStatus - error - using media session`);
 						} else {
@@ -474,7 +503,7 @@ class ADBPlugin {
 			.on('get', (callback) => {
 				var state = Characteristic.TargetMediaState.STOP;
 
-				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout) => {
 					if(err) this.displayDebug(this.name, '- Can\'t get media status');
 					else {
 						stdout = stdout.split("\n");
@@ -508,7 +537,7 @@ class ADBPlugin {
 					}
 				}
 
-				exec(`adb -s ${this.ip} shell "media dispatch ${key}"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "media dispatch ${key}"`, (err) => {
 					if(err) this.log.info(this.name, '- Can\'t send: ' + key.toUpperCase());
 					else this.log.info(this.name, '- Sending: ' + key.toUpperCase());
 				});
@@ -595,7 +624,7 @@ class ADBPlugin {
 					}
 				}
 
-				exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
 					if(err) this.displayDebug(`handleRemoteControl - Can't send: ${key}`);
 				});
 				callback(null);
@@ -645,17 +674,13 @@ class ADBPlugin {
 
 				this.checkPlaybackProgress = true;
 
-				exec(`adb -s ${this.ip} shell "dumpsys media_session | grep -e 'Media button session is' -e 'AlexaMediaPlayerRuntime'"`, (err, stdout, stderr) => {
-					stdout = stdout.trim();
-
+				this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep -e 'Media button session is' -e 'AlexaMediaPlayerRuntime'"`, (err, stdout) => {
 					if(err) {
 						this.displayDebug(`checkPlayback - error - checking current media app`);
 					} else if(this.currentApp == HOME_APP_ID || this.currentApp != OTHER_APP_ID || stdout.includes(this.currentApp) || stdout.includes('AlexaMediaPlayerRuntime')) {
-						exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState'"`, (err, stdout, stderr) => {
+						this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState'"`, (err, stdout) => {
 							if(err) errorState('media_session');
 							else {
-								stdout = stdout.trim();
-
 								if(stdout != "") {
 									if(stdout.includes("state=3")) {
 										if(!this.playing) {
@@ -675,12 +700,10 @@ class ADBPlugin {
 							changeState(state, 'media_session - ' + stdout);
 						});
 					} else {
-						exec(`adb -s ${this.ip} shell "dumpsys audio | grep 'player piid:' | grep ' state:' ${tail}"`, (err, stdout, stderr) => {
+						this.exec(`adb -s ${this.ip} shell "dumpsys audio | grep 'player piid:' | grep ' state:' ${tail}"`, (err, stdout) => {
 							// After restart, android device will display error when running this command
 							if(err) errorState('audio');
 							else {
-								stdout = stdout.trim();
-
 								if(stdout != "") {
 									stdout = stdout.trim().split("\n");
 									stdout = stdout[stdout.length - 1].trim();
@@ -712,19 +735,17 @@ class ADBPlugin {
 		if(!this.checkPowerOnProgress) {
 			this.checkPowerOnProgress = true;
 
-			exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout, stderr) => {
+			this.exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout) => {
 				if(err) {
 					// When device can't be found, set it sleep
 					if(this.awake) {
 						this.awake = false;
 						if(!this.isSpeaker()) this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
-
-						this.displayDebug(`checkPower - Error`);
 					}
 
 					if(callback) callback('error');
 				} else {
-					var output = stdout.trim().split('=')[1];
+					var output = stdout.split('=')[1];
 
 					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
 						this.awake = !this.awake;
@@ -819,7 +840,7 @@ class ADBPlugin {
 			this.currentAppOnProgress = true;
 
 			if(this.checkInputUseWindows >= 0) {
-				exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys window`);
 						this.checkInputUseWindows = -1;
@@ -833,7 +854,7 @@ class ADBPlugin {
 			} 
 
 			if(this.checkInputUseWindows < 0 && this.checkInputUseActivities >= 0) {
-				exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout, stderr) => {
+				this.exec(`adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout) => {
 					if(err) {
 						this.displayDebug(`checkInput - error while using dumpsys activity`);
 						this.checkInputUseActivities = -1;
@@ -857,17 +878,17 @@ class ADBPlugin {
 		var that = this;
 		var error = function() {
 			if(!that.disconnected) { 
-				that.log.info(`${that.name} - Device disconnected? Trying to reconnect.`);
+				that.log.info(`${that.name} - Device disconnected? Will try to reconnect later.`);
 				that.disconnected = true;
 			}
 		}
 
-		exec(`adb disconnect ${this.ip}`, (err, stdout, stderr) => {
+		this.exec(`adb disconnect ${this.ip}`, (err) => {
 			if(err) {
 				error();
 				that.displayDebug('connect - disconnect - ' + stderr.trim());
 			} else {
-				exec(`adb connect ${this.ip}`, (err, stdout, stderr) => {
+				this.exec(`adb connect ${this.ip}`, (err) => {
 					if(err) {
 						error();
 						that.displayDebug('connect - connect -' + stderr.trim());
@@ -902,12 +923,30 @@ class ADBPlugin {
 		}, this.interval);
 	}
 
+	exec(cmd, callback, chatty, stoptrying) {
+		if(chatty) this.displayDebug(`Running - ${cmd}`);
+		exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
+			stdout = stdout.trim();
+			stderr = stderr.trim();
+			
+			if(stdout && chatty) this.displayDebug(`Output - ${stdout}`);
+			if(stderr && chatty) this.displayDebug(`Error - ${stderr}`);
+
+			if(err) {
+				if(stoptrying) callback(true, "Failed execute your command, please try again.");
+				else this.exec(cmd, callback, chatty, true);
+			} else {
+				callback(stdout.includes("timed out"), stdout);
+			}
+		});
+	}
+
 	// Will be removed
 	dumpsys(callback) {
 		var that = this;
 		var adbCommand = `adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`;
 
-		exec(adbCommand, (err, stdout, stderr) => {
+		this.exec(adbCommand, (err, stdout) => {
 			if(err) {
 				if(that.limit_retry > 0) {
 					that.limit_retry--;

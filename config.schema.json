@@ -23,10 +23,30 @@
 						},
 						"ip": {
 							"type": "string",
-							"title": "Device IP",
+							"title": "IP Address",
 							"placeholder": "Type your device IP address",
 							"format": "ipv4",
 							"required": true
+						},
+						"mac": {
+							"type": "string",
+							"title": "MAC address",
+							"placeholder": "Type your device MAC address",
+							"format": "mac",
+							"required": false
+						},
+						"timeout": {
+							"type": "number",
+							"title": "Timeout",
+							"placeholder": "Timeout for ADB commnad",
+							"default": "1000",
+					        "oneOf": [
+								{ "title": "1000", "enum": ["1000"] },
+								{ "title": "2000", "enum": ["2000"] },
+								{ "title": "3000", "enum": ["3000"] },
+								{ "title": "4000", "enum": ["4000"] },
+								{ "title": "5000", "enum": ["5000"] }
+					        ]
 						},
 						"interval": {
 							"type": "number",
@@ -215,14 +235,8 @@
 							"flex-direction": "row",
 							"items": [
 								{
-									"key": "accessories[].name",
-									"flex": "2 2 200px"
-								},
-								{
-									"key": "accessories[].category",
-									"flex": "1 1 100px"
+									"key": "accessories[].name"
 								}
-
 							]
 						},
 						{
@@ -235,9 +249,29 @@
 									"flex": "2 2 200px"
 								},
 								{
+									"key": "accessories[].mac",
+									"flex": "2 2 200px"
+								}
+							]
+						},
+						{
+							"type": "flex",
+							"displayFlex": true,
+							"flex-direction": "row",
+							"items": [
+								{
+									"key": "accessories[].category",
+									"flex": "2 2 150px"
+								},
+								{
+									"key": "accessories[].timeout",
+									"flex": "1 1 100px"
+								},
+								{
 									"key": "accessories[].interval",
 									"flex": "1 1 100px"
 								}
+
 							]
 						},
 						{
