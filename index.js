@@ -344,16 +344,18 @@ class ADBPlugin {
 			.on('set', (state, callback) => {
 				let that = this;
 				let tryWOL = function() {
-					wol.wake(`${that.mac}`, { address: `${that.ip}` }, (error) => {
-						that.displayDebug("Trying Wake On LAN, error: " + error);
-						if(error) {
-							that.log.info(that.name, "- Can't make device wakeup using Wake On LAN");
-							that.deviceService.updateCharacteristic(Characteristic.Active, 0);
-						} else {
-							that.displayDebug("Wake On LAN success, your device could be ON now");
-							that.deviceService.updateCharacteristic(Characteristic.Active, 1);
-						}
-					});
+					if(that.mac) {
+						wol.wake(`${that.mac}`, { address: `${that.ip}` }, (error) => {
+							that.displayDebug("Trying Wake On LAN, error: " + error);
+							if(error) {
+								that.log.info(that.name, "- Can't make device wakeup using Wake On LAN");
+								that.deviceService.updateCharacteristic(Characteristic.Active, 0);
+							} else {
+								that.displayDebug("Wake On LAN success, your device could be ON now");
+								that.deviceService.updateCharacteristic(Characteristic.Active, 1);
+							}
+						});
+					}
 				}
 
 				this.exec(`adb connect ${this.ip}`,(err) => {
