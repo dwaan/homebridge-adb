@@ -319,8 +319,8 @@ class ADBPlugin {
 				else key = "KEYCODE_VOLUME_UP";
 
 				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
-					if(err) this.log.info(this.name, '- Can\'t set volume');
-					else this.log.info(this.name, '- Sending volume key');
+					if(err) this.displayDebug(this.name, '- Can\'t set volume');
+					else this.displayDebug(this.name, '- Sending volume key');
 				});
 
 				callback(null);
