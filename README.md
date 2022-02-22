@@ -6,43 +6,40 @@
 
 # Homebridge ADB
 
-A simple homebridge script to control remote ADB enabled Android device. The idea is to have a make random Android based TV box can be controlled with Home App. It make your Android device appear as TV accesory, where you can control sleep status, volume and dpad control via remote, and launch certain predefined app defined by you.
+Not so simple homebridge plugin to control remote ADB enabled Android device. The idea is to make random Android based TV box can be controlled with Home App. It make any Android device appear as TV accesory. Where you can control on/off status, volume and dpad control via Control Center remote, and launch certain predefined app defined in the configuration.
 
-This plugins register it self as external accesorries, so make sure after you add your Homebridge bridge to your Home App, manually add accesories to add the device you want to control via Home App
+This plugins register it self as external accesorries. Make sure after adding Homebridge bridge in Home App, manually "add accesories" to add the android device in the Home App.
 
 |![](img/IMG_7775.jpg)|![](img/IMG_7776.jpg)|![](img/IMG_7777.jpg)|![](img/IMG_7778.jpg)|
 |----------|----------|----------|----------|
 
 ## Prerequisite
 
-* Install Homebridge (and Homebridge UI X if you want, this plugin support web configuration over there) and this plugins
+* Install Homebridge, Homebridge Config UI X (this plugin support web configuration over there), and this plugins
 	```
 	sudo npm install -g --unsafe-perm homebridge homebridge-adb
 	```
 
-* Make sure you install ADB at the same machine as your Homebridge.
-	*  If you're using Ubuntu, use this command:
+* Install ADB tools inside Homebridge server. Open Homebridge Config UI X in your browser then navigate to terminal, and then run this command:
+	* If the homebridge server is inside Ubuntu, use this command:
 		```
 		sudo apt-get install android-tools-adb android-tools-fastboot
 		```
-	*  If you're using Alpine Linux (like the one from of oznu/docker-homebridge), use this command:
-		```
-		apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/community/ add android-tools
-		```
-		You can use other version of repo, but I only tested the v3.14 repo, and it seems it's the only adb tools that work with oznu/docker-homebridge .
-	*  For other OS and method please download it in here: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
-	*  When it properly installed, please check your ADB is up and running with this command:
+	*  Or, if the homebridge is inside Docker container like the one from of oznu/docker-homebridge, please refer to **Docker container** section
+	*  Or, if you're using other OS, please refer this link to download the ADB tools: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
+	*  To check if the ADB installed properly, run this command:
 		```
 		adb version
 		```
+		This will output something like `Android Debug Bridge version x.x.x`
 
-* Enable Developer mode in your Android device, visit this documentation to read more [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
+* Enable Developer mode in your Android device, visit this documentation for more information [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* Some Android device doesn't have remote debug by default. If your device is one of them, connect your device with USB cable to your server (or any computer with ADB installed) and run this command:
+* **IMPORTANT**: Some Android device doesn't have support remote ADB by default. If your device is one of them, connect your device with USB cable to any computer with ADB installed. Open terminal and run this command:
 	```
 	adb tcpip 5555
 	```
-	after that, just disconnect the USB cable from your server.
+	if no error produced, disconnect unplug the USB cable from the computer.
 
 * _Optionally_, run this command to make sure you can connect to device:
 	```
@@ -58,21 +55,16 @@ This plugins register it self as external accesorries, so make sure after you ad
 	```
 	and get it will output your device model.
 
-## Docker container based upon [oznu/docker-homebridge](https://github.com/oznu/docker-homebridge)
+### Docker container based on [oznu/docker-homebridge](https://github.com/oznu/docker-homebridge)
 
-* Append the followings line to your `config/startup.sh` to install this plugin on every container restart:
-	```shell
-	# Install the homebridge-adb plugin
-	npm install homebridge-adb
-	```
-
-* If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), append this line to your `config/startup.sh` to install adb automatically
+*  (Mandatory) If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), run this command in terminal to install adb
 	```shell
 	# Install adb, required by the homebridge-adb plugin
-	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ add android-tools
+	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/community/ add android-tools
 	```
+	You can use other version of repo, but I only tested the v3.14 repo, and it seems it's the only adb tools that work with oznu/docker-homebridge .
 
-* If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), append the following lines to your `config/startup.sh` to install adb automatically
+* (Mandatory) If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), run this command in terminal to install adb
 	```shell
 	# Update apt package index
 	apt-get update
@@ -81,11 +73,19 @@ This plugins register it self as external accesorries, so make sure after you ad
 	apt-get install -y android-tools-adb android-tools-fastboot
 	```
 
-* _Optionally_, if you run into issues when connecting to your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
+*  (Optional) Append the followings line to your `config/startup.sh` to install this plugin on every container restart:
+	```shell
+	# Install the homebridge-adb plugin
+	npm install homebridge-adb
+	```
+	
+* (Optional) If you run into issues when connecting your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
 	```shell
 	# Fix connection issues for the homebridge-adb plugin
 	adb connect $YOUR_ANDROID_DEVICE_IP
 	```
+
+
 
 ## Configuration
 
@@ -164,7 +164,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * *poweron*, *poweroff* (optional): assign csutom key event code for Power on/off, you can use KEYCODE_POWER or combination of KEYCODE_AWAKE/KEYCODE_SLEEP. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the other key codes that might more suitable for your device.
 
 
-## ADB command that this script use
+### **GOOD TO KNOW**: ADB commands that this plugin use
 
 * Device name
 	```
