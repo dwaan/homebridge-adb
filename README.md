@@ -146,7 +146,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **platform** (mandatory): the name of this plugin.
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
-* *mac* (optional): the MAC address of the device. When provided abd your device support Wake On LAN, this plugin will try to use WOL to wake up your device. Useful if your device disconnect ADB connection after it turned off.
+* *mac* (optional): the MAC address of the device. When provided and your device support Wake On LAN, this plugin will try to use Wake On LAN to Turn On your device. Useful if your device disconnect ADB connection after it turned off.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you leave this blank, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.
 	* *name* (mandatory): the name of the input.
 	* *id* (mandatory): the application id. The id will be use for input switcher in Home app. If you put random id, the input will move to "other".

@@ -137,7 +137,7 @@
 							"type": "string",
 							"title": "Playback as Motion Sensor",
 							"placeholder": "Playback as Motion Sensor",
-							"default": "true",
+							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -207,14 +207,26 @@
 						"poweron": {
 							"type": "string",
 							"title": "Power On Keycode",
-							"placeholder": "Type your power on keycode",
-							"default": "KEYCODE_POWER"
+							"placeholder": "eg: KEYCODE_POWER",
+							"default": ""
 						},
 						"poweroff": {
 							"type": "string",
 							"title": "Power Off Keycode",
-							"placeholder": "Type your power off keycode",
-							"default": "KEYCODE_POWER"
+							"placeholder": "eg: KEYCODE_POWER",
+							"default": ""
+						},
+						"poweronexec": {
+							"type": "string",
+							"title": "Power On Script",
+							"placeholder": "eg: poweron -t now",
+							"default": ""
+						},
+						"poweroffexec": {
+							"type": "string",
+							"title": "Power Off Script",
+							"placeholder": "eg: poweroff -t now",
+							"default": ""
 						}
 					}
 				}
@@ -249,8 +261,8 @@
 									"flex": "2 2 200px"
 								},
 								{
-									"key": "accessories[].mac",
-									"flex": "2 2 200px"
+									"key": "accessories[].category",
+									"flex": "1 1 100px"
 								}
 							]
 						},
@@ -259,10 +271,6 @@
 							"displayFlex": true,
 							"flex-direction": "row",
 							"items": [
-								{
-									"key": "accessories[].category",
-									"flex": "2 2 150px"
-								},
 								{
 									"key": "accessories[].timeout",
 									"flex": "1 1 100px"
@@ -296,6 +304,25 @@
 										{
 											"key": "accessories[].inputs[].adb",
 											"flex": "5 5 170px"
+										}
+									]
+								}
+							]
+						},
+						{
+							"title": "Wake On LAN",
+							"expandable": true,
+							"expanded": false,
+							"description": "Plugin will try to use Wake On LAN when you provide your device MAC address. Useful when your device disconnected from Network after it turned off.",
+							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].mac",
+											"flex": "1 1 100px"
 										}
 									]
 								}
@@ -369,10 +396,10 @@
 							]
 						},
 						{
-							"title": "Power KeyCode",
+							"title": "Power KeyCode / Executable",
 							"expandable": true,
 							"expanded": false,
-							"description": "Use costum keycode to power on/off your device.",
+							"description": "Use costum keycode to power on/off your device, or run your own shell script to turn on/off your device.",
 							"items": [
 								{
 									"type": "flex",
@@ -385,6 +412,22 @@
 										},
 										{
 											"key": "accessories[].poweroff",
+											"flex": "1 1 100px"
+										}
+
+									]
+								},
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].poweronexec",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].poweroffexec",
 											"flex": "1 1 100px"
 										}
 

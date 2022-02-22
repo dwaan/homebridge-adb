@@ -46,6 +46,7 @@ class ADBPlugin {
 		// Exec timeout
 		this.timeout = this.config.timeout || 1000;
 		if(this.timeout < 1000) this.interval = 1000;
+		this.exectimeout = false;
 		// Inputs
 		this.inputs = this.config.inputs;
 		this.hidenumber = this.config.hidenumber;
@@ -66,6 +67,9 @@ class ADBPlugin {
 		this.poweroff = this.config.poweroff;
 		if(!this.poweron) this.poweron = "KEYCODE_POWER";
 		if(!this.poweroff) this.poweroff = this.poweron;
+		// Power ON/OFF Executable
+		this.poweronexec = this.config.poweronexec;
+		this.poweroffexec = this.config.poweroffexec;
 		// Category
 		this.category = "TELEVISION";
 		if(this.config.category) this.category = this.config.category.toUpperCase();
@@ -77,6 +81,8 @@ class ADBPlugin {
 		}
 
 		// Variable
+		this.wol = false;
+		this.woltimeout = false;
 		this.awake = false;
 		this.playing = false;
 		this.currentInputIndex = 0;
@@ -98,8 +104,9 @@ class ADBPlugin {
 		this.checkInputUseActivities = 0;
 		this.checkInputUseWindows = 0; 
 
-		// Debug
-		this.prevDebugMessage = "";
+		// Debug and Info
+		this.prevDebugMessage = ["", ""];
+		this.prevInfoMessage = ["", ""];
 
 
 		/**
@@ -212,7 +219,7 @@ class ADBPlugin {
 					else if(stderr.includes('device unauthorized.')) message = 'Device unauthorized.';
 					else message = 'Can\'t get device information.';
 
-					this.log.info(this.name, ` - ${message} You can ignore this message. But if problem occurred with your device, please restart your homebridge server.`);
+					this.displayInfo(`${message} You can ignore this message. But if problem occurred with your device, please restart your homebridge server.`);
 				}
 
 				stdout = stdout.split("\n");
@@ -278,7 +285,7 @@ class ADBPlugin {
 				name = `${humanNumber}. Hidden Input`;
 			} else {
 				name = `${input.name}`;
-				if (!this.hidenumber) name = `${humanNumber}. ${name}`;
+				if(!this.hidenumber) name = `${humanNumber}. ${name}`;
 			}
 
 			this.displayDebug(this.name, name, targetVisibility, currentVisibility);
@@ -319,8 +326,8 @@ class ADBPlugin {
 				else key = "KEYCODE_VOLUME_UP";
 
 				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
-					if(err) this.displayDebug(this.name, '- Can\'t set volume');
-					else this.displayDebug(this.name, '- Sending volume key');
+					if(err) this.displayDebug('Can\'t set volume');
+					else this.displayDebug('Sending volume key');
 				});
 
 				callback(null);
@@ -332,66 +339,86 @@ class ADBPlugin {
 				callback(null, 0);
 			})
 			.on('set', (state, callback) => {
-				callback(null, state);
+				callback(null);
 			});
 
 		this.deviceService.addLinkedService(this.deviceTelevisionSpeakerService);
 	}
 
 	handleOnOff() {
-		// handle [on / off]
+		// Handle [On / Off]
 		this.deviceService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				let that = this;
-				let tryWOL = function() {
-					if(that.mac) {
-						wol.wake(`${that.mac}`, { address: `${that.ip}` }, (error) => {
-							that.displayDebug("Trying Wake On LAN, error: " + error);
-							if(error) {
-								that.log.info(that.name, "- Can't make device wakeup using Wake On LAN");
-								that.deviceService.updateCharacteristic(Characteristic.Active, 0);
-							} else {
-								that.displayDebug("Wake On LAN success, your device could be ON now");
-								that.deviceService.updateCharacteristic(Characteristic.Active, 1);
-							}
-						});
-					}
-				}
-
-				this.exec(`adb connect ${this.ip}`,(err) => {
-					if(!err && state != this.awake) {
-						if(state) {
-							this.exec(`adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, (err, stdout) => {
+				if (state != this.awake) {
+					if(state) {
+						// Power On
+						if(this.mac) {
+							wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
+								this.displayDebug("Trying Wake On LAN, error: " + error);
+								if(error) {
+									this.displayInfo("Can't make device wakeup using Wake On LAN");
+								} else {
+									// Forcing device status on
+									this.wol = true;
+									this.awake = true;
+									this.displayDebug("Wake On LAN - Success");
+									this.deviceService.updateCharacteristic(Characteristic.Active, state);
+		
+									// After 3, temporary WOL status need to be reset, 
+									// and let ADB get the power status from device
+									this.woltimeout = setTimeout(() => {
+										this.displayDebug("Wake On LAN - Reset");
+										this.wol = false;
+										this.woltimeout = false;
+									}, 3000);
+								}
+							});
+						} else if(this.poweronexec) {
+							this.exec(`${this.poweronexec}`, (err, stdout) => {
+								this.displayDebug("Executing Power On");
 								if(err) {
-									this.log.info(this.name, "- Can't make device wakeup using ADB command");
+									this.displayInfo("Can't run you Power On Script");
 									this.displayDebug("handleOnOff - " + stdout);
 								} else {
-									this.displayDebug("On - Using ADB command");
+									this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								}
+							});
+						} else {
+							this.exec(`adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, (err, stdout) => {
+								if(err) {
+									this.displayInfo("Can't make device wakeup using ADB command");
+									this.displayDebug("handleOnOff - " + stdout);
+								} else {
+									this.displayDebug("ADB Power On");
+									this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								}
+							});
+						}
+					} else {
+						// Power Off
+						if(this.poweroffexec) {
+							this.exec(`${this.poweroffexec}`, (err, stdout) => {
+								this.displayDebug("Executing Power Off");
+								if(err) {
+									this.displayInfo("Can't run you Power Off Script");
+									this.displayDebug("handleOnOff - " + stdout);
+								} else {
 									this.deviceService.updateCharacteristic(Characteristic.Active, state);
 								}
 							});
 						} else {
 							this.exec(`adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`,(err, stdout) => {
 								if(err) {
-									this.log.info(this.name, "- Can't make device sleep");
+									this.displayInfo("Can't make device sleep");
 									this.displayDebug("handleOnOff - " + stdout);
 								} else {
-									this.displayDebug("Off");
+									this.displayDebug("ADB Power Off");
 									this.deviceService.updateCharacteristic(Characteristic.Active, state);
 								}
 							});
 						}
-					} else if(err) {
-						this.log.info(this.name, "- Device not responding");
-						this.displayDebug("handleOnOff - Error - " + stdout.trim());
-
-						if(state != this.awake && state) tryWOL();
-					} else {
-						if(err) this.displayDebug("handleOnOff - Time out");
 					}
-				});
-
-				if(state != this.awake && state) tryWOL();
+				}
 
 				callback(null);
 			}).on('get', (callback) => {
@@ -420,7 +447,7 @@ class ADBPlugin {
 							if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].id != OTHER_APP_ID) {
 								let type = this.inputs[this.currentInputIndex].id.trim();
 
-								if (this.inputs[this.currentInputIndex].adb) {
+								if(this.inputs[this.currentInputIndex].adb) {
 									// Run specific custom ADB command
 									adb = `adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
 									this.displayDebug(`Running - ADB command - ${this.inputs[this.currentInputIndex].adb}`);
@@ -438,11 +465,11 @@ class ADBPlugin {
 							this.exec(adb, (err) => {
 								if(!err) {
 									this.currentApp = this.inputs[this.currentInputIndex].id;
-									this.log.info(this.name, "- handleInputs -", this.inputs[this.currentInputIndex].name);
-								} else this.log.info(this.name, "- handleInputs - Can't open -", this.inputs[this.currentInputIndex].name);
+									this.displayInfo(`handleInputs -  ${this.inputs[this.currentInputIndex].name}`);
+								} else this.displayInfo(`handleInputs - Can't open ${this.inputs[this.currentInputIndex].name}`);
 							});
 						} else {
-							this.log.info(this.name, "- handleInputs - Device not responding");
+							this.displayInfo("handleInputs - Device not responding");
 						}
 
 						this.currentAppOnProgress = false;
@@ -460,18 +487,18 @@ class ADBPlugin {
 				callback(null, 100);
 			})
 			.on('set', (state, callback) => {
-				this.log.info(this.name, '- Volume: ' + state);
+				this.displayInfo(`Volume: ${state}`);
 				callback(null);
 			});
 	}
 
 	handleMediaStatus() {
-		// unused - handle [media status]
+		// Unused - handle [media status]
 		this.deviceService.getCharacteristic(Characteristic.CurrentMediaState)
 			.on('get', (callback) => {
 				var state = Characteristic.CurrentMediaState.LOADING;
 				var tail = "";
-				var head = ""
+				var head = "";
 
 				if(this.useHead === true) head = " | head -1";
 				if(this.useTail === true) tail = " | tail -1";
@@ -541,8 +568,8 @@ class ADBPlugin {
 				}
 
 				this.exec(`adb -s ${this.ip} shell "media dispatch ${key}"`, (err) => {
-					if(err) this.log.info(this.name, '- Can\'t send: ' + key.toUpperCase());
-					else this.log.info(this.name, '- Sending: ' + key.toUpperCase());
+					if(err) this.displayInfo(`Can't send: ${key.toUpperCase()}`);
+					else this.displayInfo(`Sending: ${key.toUpperCase()}`);
 				});
 
 				callback(null);
@@ -660,7 +687,7 @@ class ADBPlugin {
 							if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
 							that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
 							that.displayDebug(`checkPlayback - ${that.playing}`);
-							that.log.info(`${that.name} - Media playing - ${that.playing}`);
+							that.displayInfo(`Media playing - ${that.playing}`);
 							that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
 						}, that.playbacksensordelay);
 					}
@@ -736,11 +763,13 @@ class ADBPlugin {
 	}
 
 	checkPower(callback) {
-		if(!this.checkPowerOnProgress) {
+		if(!this.wol && !this.checkPowerOnProgress) {
 			this.checkPowerOnProgress = true;
 
 			this.exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout) => {
-				if(err) {
+				if(this.wol) {
+					this.deviceService.getCharacteristic(Characteristic.Active).updateValue(true);
+				} else if(err) {
 					// When device can't be found, set it sleep
 					if(this.awake) {
 						this.awake = false;
@@ -821,7 +850,7 @@ class ADBPlugin {
 							that.currentInputIndex = that.inputs.length - 1;
 							if(that.inputs[that.currentInputIndex]) that.inputs[that.currentInputIndex].id = stdout;
 							if(that.inputs[that.currentInputIndex].service) {
-								if (!that.hidenumber) humanName = `${that.currentInputIndex + 1}. ${humanName}`;
+								if(!that.hidenumber) humanName = `${that.currentInputIndex + 1}. ${humanName}`;
 								that.inputs[that.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
 							}
 						}
@@ -831,7 +860,7 @@ class ADBPlugin {
 				}
 
 				if(that.currentApp != stdout) {
-					that.log.info(that.name, "- Current app -", "\x1b[4m" + stdout + "\x1b[0m");
+					that.displayInfo(`Current app - \x1b[4m${stdout}\x1b[0m`);
 					that.currentApp = stdout;
 				}
 
@@ -873,7 +902,7 @@ class ADBPlugin {
 			
 			if(this.checkInputUseActivities < 0 && this.checkInputUseWindows < 0 && this.checkInputDisplayError) {
 				this.checkInputDisplayError = false;
-				that.log.info(`${that.name} - Can't read current app from device, please report this error: https://github.com/dwaan/homebridge-adb/issues/66`);
+				that.displayInfo(`Can't read current app from device, please report this error: https://github.com/dwaan/homebridge-adb/issues/66`);
 			}
 		}
 	}
@@ -882,7 +911,7 @@ class ADBPlugin {
 		var that = this;
 		var error = function() {
 			if(!that.disconnected) { 
-				that.log.info(`${that.name} - Device disconnected? Will try to reconnect later.`);
+				that.displayInfo(`Device disconnected? Will try to reconnect later.`);
 				that.disconnected = true;
 			}
 		}
@@ -927,6 +956,10 @@ class ADBPlugin {
 		}, this.interval);
 	}
 
+
+	//////////
+	// Helpers
+
 	exec(cmd, callback, chatty, stoptrying) {
 		if(chatty) this.displayDebug(`Running - ${cmd}`);
 		exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
@@ -936,46 +969,30 @@ class ADBPlugin {
 			if(stdout && chatty) this.displayDebug(`Output - ${stdout}`);
 			if(stderr && chatty) this.displayDebug(`Error - ${stderr}`);
 
+			// console.log("Test", err, stdout, stderr);
 			if(err) {
 				if(stoptrying) callback(true, "Failed execute your command, please try again.");
-				else this.exec(cmd, callback, chatty, true);
+				else this.exectimeout = setTimeout(() => {
+					this.exec(cmd, callback, chatty, true);
+				}, this.timeout);
 			} else {
 				callback(stdout.includes("timed out"), stdout);
 			}
 		});
 	}
 
-	// Will be removed
-	dumpsys(callback) {
-		var that = this;
-		var adbCommand = `adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`;
-
-		this.exec(adbCommand, (err, stdout) => {
-			if(err) {
-				if(that.limit_retry > 0) {
-					that.limit_retry--;
-					callback(true, 'false');
-				} else if (that.limit_retry == 0){
-					that.log.info(that.name, "- Device disconnected. Please turn on your device manually.");
-					that.limit_retry--;
-					callback(false, 'false');
-				}
-			} else {
-				if(that.limit_retry < 0) {
-					that.limit_retry = LIMIT_RETRY;
-					that.log.info(that.name, "- Connected.");
-				}
-
-				stdout = stdout.trim().split('=')[1];
-				callback(false, stdout);
-			}
-		});
+	displayDebug(text){
+		if(this.debug && this.prevDebugMessage[0] != text && this.prevDebugMessage[1] != text) {
+			this.prevDebugMessage[1] = this.prevDebugMessage[0];
+			this.prevDebugMessage[0] = text;
+			this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+		}
 	}
 
-	displayDebug(text){
-		if(this.debug && this.prevDebugMessage != text) {
-			this.prevDebugMessage = text;
-			this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+	displayInfo(text){
+		if(this.prevInfoMessage != text) {
+			this.prevInfoMessage = text;
+			this.log.info(`${this.name} - ${text}`);
 		}
 	}
 }
