@@ -105,7 +105,12 @@ class ADBPlugin {
 
 		// Debug and Info
 		this.prevDebugMessage = ["", ""];
-		this.prevInfoMessage = ["", ""];
+		this.prevInfoMessage = "";
+
+
+		// Extra
+		this.unrecognized = false;
+		this.handleOnOffOnProgress = false;
 
 
 		/**
@@ -184,43 +189,33 @@ class ADBPlugin {
 		 * Check ADB connection before publishing the accesory
 		 */
 
-		this.connect(() => {
-			var adbCommand = `adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`;
+		this.displayInfo(`Initializing`);
 
-			// Check if device have tail and head command
-			if(this.useTail === undefined) {
-				this.exec(`adb -s ${this.ip} shell "tail --help"`, (err, stdout) => {
-					if(err) {
-						this.displayDebug(`constructor - can't use tail command, adb will send larger output`);
-						this.useTail = false;
-					} else {
-						this.useTail = true;
-					}
-				});
-			}
-			if(this.useHead === undefined) {
-				this.exec(`adb -s ${this.ip} shell "head --help"`, (err, stdout) => {
-					if(err) {
-						this.displayDebug(`constructor - can't use head command, adb will send larger output`);
-						this.useHead = false;
-					} else {
-						this.useHead = true;
-					}
-				});
-			}
+		// Get the accesory information and send it to HomeBridge
+		this.exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
+			if(err) {
+				this.log.error(`\n\nWARNING: Unrecognized device - "${this.name}".\nPlease check if the device IP address is correct.\n`);
+			} else {
+				this.displayInfo(`Device initialized.`);
 
-			// get the accesory information and send it to HB
-			this.exec(adbCommand, (err, stdout) => {
-				if(err) {
-					var message = "";
-
-					if(stderr.includes('device still authorizing')) message = 'Device still authorizing.';
-					else if(stderr.includes('device unauthorized.')) message = 'Device unauthorized.';
-					else message = 'Can\'t get device information.';
-
-					this.displayInfo(`${message} You can ignore this message. But if problem occurred with your device, please restart your homebridge server.`);
+				// Check if device have tail and head command
+				if(this.useTail === undefined) {
+					this.exec(`adb -s ${this.ip} shell "tail --help"`, (err) => {
+						if(err) {
+							this.displayDebug(`Can't use tail command, ADB will unoptimized output.`);
+							this.useTail = false;
+						} else this.useTail = true;
+					});
 				}
-
+				if(this.useHead === undefined) {
+					this.exec(`adb -s ${this.ip} shell "head --help"`, (err) => {
+						if(err) {
+							this.displayDebug(`Can't use head command, ADB will unoptimized output`);
+							this.useHead = false;
+						} else this.useHead = true;
+					});
+				}
+				
 				stdout = stdout.split("\n");
 
 				// Publish the accessories
@@ -229,7 +224,7 @@ class ADBPlugin {
 					.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 					.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 				this.api.publishExternalAccessories(PLUGIN_NAME, [this.device]);
-				this.displayDebug(this.name, `- Created`);
+				this.displayDebug(`Created`);
 
 				// Publish additional sensor accesories
 				if(this.playbacksensor) {
@@ -238,13 +233,14 @@ class ADBPlugin {
 						.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 						.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 					this.api.publishExternalAccessories(PLUGIN_NAME, [this.devicePlaybackSensor]);
-					this.displayDebug(this.name, `- Sensor created`);
+					this.displayDebug(`Sensor created`);
 				}
-			});
 
-			// Loop the power status
-			this.update();
+				// Loop the power status
+				this.update();
+			}
 		});
+
 	}
 
 	createInputs() {
@@ -348,11 +344,14 @@ class ADBPlugin {
 		// Handle [On / Off]
 		this.deviceService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				if (state != this.awake) {
-					this.checkPowerOnProgress = true;
+				if(state != this.awake && !this.handleOnOffOnProgress) {
+					// Prevent double run
+					this.handleOnOffOnProgress = true;
+
 					if(state) {
 						// Power On
 						this.deviceService.updateCharacteristic(Characteristic.Active, state);
+						this.checkInputDisplayError = false;
 
 						if(this.mac) {
 							wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
@@ -373,7 +372,7 @@ class ADBPlugin {
 									}, 3000);
 								}
 
-								this.checkPowerOnProgress = false;
+								this.handleOnOffOnProgress = false;
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else if(this.poweronexec) {
@@ -387,7 +386,7 @@ class ADBPlugin {
 									this.displayDebug("Executable - Power On");
 								}
 
-								this.checkPowerOnProgress = false;
+								this.handleOnOffOnProgress = false;
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
@@ -400,7 +399,7 @@ class ADBPlugin {
 									this.displayDebug("ADB - Power On");
 								}
 
-								this.checkPowerOnProgress = false;
+								this.handleOnOffOnProgress = false;
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						}
@@ -419,7 +418,7 @@ class ADBPlugin {
 									this.displayDebug("Executable - Power Off");
 								}
 
-								this.checkPowerOnProgress = false;
+								this.handleOnOffOnProgress = false;
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
@@ -432,7 +431,7 @@ class ADBPlugin {
 									this.displayDebug("ADB - Power Off");
 								}
 
-								this.checkPowerOnProgress = false;
+								this.handleOnOffOnProgress = false;
 								this.deviceService.updateCharacteristic(Characteristic.Active, state);
 							});
 						}
@@ -776,7 +775,7 @@ class ADBPlugin {
 	}
 
 	checkPower(callback) {
-		if(!this.wol && !this.checkPowerOnProgress) {
+		if(!this.unrecognized && !this.wol && !this.checkPowerOnProgress && !this.handleOnOffOnProgress) {
 			this.checkPowerOnProgress = true;
 
 			this.exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout) => {
@@ -915,18 +914,59 @@ class ADBPlugin {
 			
 			if(this.checkInputUseActivities < 0 && this.checkInputUseWindows < 0 && this.checkInputDisplayError) {
 				this.checkInputDisplayError = false;
-				that.displayInfo(`Can't read current app from device, please report this error: https://github.com/dwaan/homebridge-adb/issues/66`);
+				that.displayInfo(`Can't read current app from device. Turn OFF then turn ON your device to fix it.`);
 			}
 		}
 	}
 
-	connect(callback) {
+	connect(callback, callbackerror) {
 		var that = this;
 
-		exec(`adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout) => {
-			if(err) {
-				that.displayInfo(`Device disconnected? Will try to reconnect later.`);
-				that.displayDebug(`connect - ${stdout.trim()}`);
+		exec(`adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout, stderr) => {
+			var message = "";
+			var reconnect = false;
+
+			stdout = stdout.trim();
+			stderr = stderr.trim();
+			
+			if(stdout == "") stdout = stderr;
+			if(stderr == "") stderr = stdout;
+
+			if(stdout.includes(`device still authorizing`)) {
+				err = false;
+				reconnect = true;
+				message = `Device still authorizing. Please wait.`;
+			} else if(stdout.includes(`device unauthorized.`)) {
+				err = false;
+				reconnect = true;
+				message = `Unauthorized device. Please check your device screen for authorization popup.`;
+			} else if(stdout.includes(`Connection refused`)) {
+				err = true;
+				reconnect = false;
+				message = `Unrecognized device. Please check your configuration for incorrect IP address.`;
+				this.unrecognized = true;
+			} else if(stdout.includes(`Operation timed out. Reconnecting.`)) {
+				err = false;
+				reconnect = true;
+				message= `Connection timeout. Reconnecting.`
+			} else if(err) {
+				reconnect = true;
+				message = `Device disconnected or turned off? Reconnecting.`;
+			}
+			
+			if(message) {
+				if(!this.unrecognized) {
+					that.displayInfo(`${message}`);
+					// When ADB server get killed, adb connect will return the connection in approx 7 seconds
+					exec(`adb connect ${this.ip}`, { timeout: 10000 }, (err) => {
+						if(!err) {
+							that.displayInfo(`Reconnected`);
+							if(callback) callback();
+						}
+					});
+				}
+
+				if(callbackerror) callbackerror(err, message);
 			} else {
 				if(callback) callback();
 			}
@@ -958,37 +998,39 @@ class ADBPlugin {
 	// Helpers
 
 	exec(cmd, callback, chatty, stoptrying) {
-		let timeoutmessage = "Operation timed out";
+		let timeoutmessage = `Operation timed out`;
+		let notfound = `error: device '${this.ip}' not found`;
 
 		if(chatty) this.displayDebug(`Running - ${cmd}`);
-		exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
-			stdout = stdout.trim();
-			stderr = stderr.trim();
-			
-			if(stdout && chatty) this.displayDebug(`Output - ${stdout}`);
-			if(stderr && chatty) this.displayDebug(`Error - ${stderr}`);
+		if(!this.unrecognized) {
+			exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
+				stdout = stdout.trim();
+				stderr = stderr.trim();
 
-			if(err) {
-				if(stoptrying) callback(true, "Failed execute your command.");
-				else this.exectimeout = setTimeout(() => {
-					this.exec(cmd, callback, chatty, true);
-				}, this.timeout);
-			} else {
-				if(stdout == `error: device '${this.ip}' not found`) {
-					this.displayDebug(`Reconnecting`);
+				if(stdout == "") stdout = stderr;
+				if(stderr == "") stderr = stdout;
 
-					exec(`adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout, stderr) => {
-						stdout = stdout.trim();
-						stderr = stderr.trim();
-						
-						if(err || stdout.includes(timeoutmessage)) callback(true, "Can't find the device.");
-						else this.exec(cmd, callback, chatty);
-					});
+				if(err) {
+					if(stdout == notfound) {
+						this.displayDebug(`Reconnecting`);
+
+						this.connect(() => {
+							this.displayDebug(`Reconnected`);
+							this.exec(cmd, callback, chatty);
+						}, (err, message) => {
+							callback(err, message);
+						});
+					} else {
+						if(stoptrying) callback(true, `Failed execute the command.`, `Failed execute the command.`);
+						else this.exectimeout = setTimeout(() => {
+							this.exec(cmd, callback, chatty, true);
+						}, this.timeout);
+					}
 				} else {
 					callback(stdout.includes(timeoutmessage), stdout);
 				}
-			}
-		});
+			});
+		}
 	}
 
 	displayDebug(text){
@@ -1022,9 +1064,15 @@ class ADBPluginPlatform {
 	initAccessory() {
 		// read from config.accessories
 		if(this.config.accessories && Array.isArray(this.config.accessories)) {
-			for (let accessory of this.config.accessories) {
-				if(accessory) new ADBPlugin(this.log, accessory, this.api);
-			}
+			exec("adb start-server", (err) => {
+				if(err) {
+					this.log.error(`\n\nWARNING: Can't start ADB, make sure you already installed ADB-TOOLS in your homebridge server.\nVisit https://github.com/dwaan/homebridge-adb for ADB-TOOLS instalation guide.\n`);
+				} else {
+					for (let accessory of this.config.accessories) {
+						if(accessory) new ADBPlugin(this.log, accessory, this.api);
+					}
+				}
+			});
 		} else if(this.config.accessories) {
 			this.log.info('Cannot initialize. Type: %s', typeof this.config.accessories);
 		}
