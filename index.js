@@ -73,12 +73,6 @@ class ADBPlugin {
 		// Category
 		this.category = "TELEVISION";
 		if(this.config.category) this.category = this.config.category.toUpperCase();
-		this.isSpeaker = function() {
-			// if(this.category == "SPEAKER" || this.category == "AUDIO_RECEIVER") return true;
-			// else return false;
-
-			return false;
-		}
 
 		// Variable
 		this.wol = false;
@@ -139,50 +133,14 @@ class ADBPlugin {
 			this.device.category = this.api.hap.Categories.TELEVISION;
 
 		// add the device service
-		if(this.isSpeaker())
-			this.deviceService = this.device.addService(Service.SmartSpeaker);
-		else
-			this.deviceService = this.device.addService(Service.Television);
+		this.deviceService = this.device.addService(Service.Television);
 
 		// get device information
 		this.deviceInfo = this.device.getService(Service.AccessoryInformation);
 
 		// set device service name
 		this.deviceService.setCharacteristic(Characteristic.ConfiguredName, this.name);
-		if(!this.isSpeaker()) this.deviceService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
-
-		// Handle volume and media - currenty unavailable 
-		// this.handleVolume();
-		// this.handleMediaStatus();
-		// this.handleMediaStates();
-
-		if(!this.isSpeaker()) {
-			// Handle On Off
-			this.handleOnOff();
-
-			// Handle input
-			if(this.inputs.length > 0) {
-				this.createInputs();
-				this.handleInputs();
-			}
-
-			// Show Control Center Remote if needed
-			this.handleRemoteControl();
-
-			// Create additional services
-			if(!this.skipSpeaker) {
-				this.createTelevisionSpeakers();
-			}
-		}
-
-		// add playback sensor
-		if(this.playbacksensor) {
-			this.devicePlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
-			this.devicePlaybackSensor.category = this.api.hap.Categories.SENSOR;
-			this.devicePlaybackSensorInfo = this.devicePlaybackSensor.getService(Service.AccessoryInformation);
-			this.devicePlaybackSensorService = this.devicePlaybackSensor.addService(Service.MotionSensor);
-			this.handleMediaAsSensor();
-		}
+		this.deviceService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
 		/**
 		 * Publish as external accessory
@@ -196,7 +154,22 @@ class ADBPlugin {
 			if(err) {
 				this.log.error(`\n\nWARNING: Unrecognized device - "${this.name}".\nPlease check if the device IP address is correct.\n`);
 			} else {
-				this.displayInfo(`Device initialized.`);
+				// Handle On Off
+				this.handleOnOff();
+
+				// Handle input
+				if(this.inputs.length > 0) {
+					this.createInputs();
+					this.handleInputs();
+				}
+
+				// Show Control Center Remote if needed
+				this.handleRemoteControl();
+
+				// Create speaker services
+				if(!this.skipSpeaker) {
+					this.createTelevisionSpeakers();
+				}
 
 				// Check if device have tail and head command
 				if(this.useTail === undefined) {
@@ -218,16 +191,23 @@ class ADBPlugin {
 				
 				stdout = stdout.split("\n");
 
-				// Publish the accessories
+				// Publish tv accessories
 				this.deviceInfo
 					.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
 					.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
 					.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
 				this.api.publishExternalAccessories(PLUGIN_NAME, [this.device]);
-				this.displayDebug(`Created`);
+				this.displayDebug(`Device created`);
 
-				// Publish additional sensor accesories
 				if(this.playbacksensor) {
+					// Add playback sensor
+					this.devicePlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
+					this.devicePlaybackSensor.category = this.api.hap.Categories.SENSOR;
+					this.devicePlaybackSensorInfo = this.devicePlaybackSensor.getService(Service.AccessoryInformation);
+					this.devicePlaybackSensorService = this.devicePlaybackSensor.addService(Service.MotionSensor);
+					this.handleMediaAsSensor();
+
+					// Publish playback sensor
 					this.devicePlaybackSensorInfo
 						.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
 						.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
@@ -235,6 +215,9 @@ class ADBPlugin {
 					this.api.publishExternalAccessories(PLUGIN_NAME, [this.devicePlaybackSensor]);
 					this.displayDebug(`Sensor created`);
 				}
+
+				// Device finish initialzing
+				this.displayInfo(`Device initialized.`);
 
 				// Loop the power status
 				this.update();
@@ -312,7 +295,7 @@ class ADBPlugin {
 			// .setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.ABSOLUTE);
 			.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.RELATIVE);
 
-		// handle [volume control]
+		// Volume control
 		this.deviceTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
 			.on('set', (state, callback) => {
 				var key = "";
@@ -321,14 +304,14 @@ class ADBPlugin {
 				else key = "KEYCODE_VOLUME_UP";
 
 				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
-					if(err) this.displayDebug('Can\'t set volume');
-					else this.displayDebug('Sending volume key');
+					if(err) this.displayDebug(`Can't set volume`);
+					else this.displayDebug(`Sending volume key`);
 				});
 
 				callback(null);
 			});
 
-		// handle [mute control] - not implemented yet
+		// Mute control - not implemented yet
 		this.deviceTelevisionSpeakerService.getCharacteristic(Characteristic.Mute)
 			.on('get', (callback) => {
 				callback(null, 0);
@@ -338,6 +321,8 @@ class ADBPlugin {
 			});
 
 		this.deviceService.addLinkedService(this.deviceTelevisionSpeakerService);
+
+		this.displayDebug(`Speaker created`);
 	}
 
 	handleOnOff() {
@@ -478,7 +463,7 @@ class ADBPlugin {
 					}
 
 					this.exec(adb, (err) => {
-						if(!err) this.displayInfo(`handleInputs - Can't open ${this.inputs[this.currentInputIndex].name}`);
+						if(err) this.displayInfo(`handleInputs - Can't open ${this.inputs[this.currentInputIndex].name}`);
 						else {
 							this.currentApp = this.inputs[this.currentInputIndex].id;
 							this.displayInfo(`handleInputs -  ${this.inputs[this.currentInputIndex].name}`);
@@ -487,102 +472,6 @@ class ADBPlugin {
 						this.currentAppOnProgress = false;
 					});
 				}
-
-				callback(null);
-			});
-	}
-
-	handleVolume() {
-		// handle [volume]
-		this.deviceService.getCharacteristic(Characteristic.Volume)
-			.on('get', (callback, state) => {
-				callback(null, 100);
-			})
-			.on('set', (state, callback) => {
-				this.displayInfo(`Volume: ${state}`);
-				callback(null);
-			});
-	}
-
-	handleMediaStatus() {
-		// Unused - handle [media status]
-		this.deviceService.getCharacteristic(Characteristic.CurrentMediaState)
-			.on('get', (callback) => {
-				var state = Characteristic.CurrentMediaState.LOADING;
-				var tail = "";
-				var head = "";
-
-				if(this.useHead === true) head = " | head -1";
-				if(this.useTail === true) tail = " | tail -1";
-
-				if(!this.noPlaybackSensor) {
-					this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState ${head}"`, (err, stdout) => {
-						if(err) {
-							this.displayDebug(`handleMediaStatus - error - using media session`);
-						} else {
-							stdout = stdout.split("\n");
-							stdout = stdout[0].trim();
-
-							if(stdout.includes("state=2, position=0")) state = Characteristic.CurrentMediaState.STOP;
-							else if(stdout.includes("state=3")) state = Characteristic.CurrentMediaState.PLAY;
-							else state = Characteristic.CurrentMediaState.PAUSE;
-						}
-
-						this.deviceService.setCharacteristic(Characteristic.CurrentMediaState, state);
-					});
-				} else {
-					state = Characteristic.CurrentMediaState.STOP;
-					this.deviceService.setCharacteristic(Characteristic.CurrentMediaState, state);
-				}
-
-				callback(null, state);
-			});
-	}
-
-	handleMediaStates() {
-		// handle [media state]
-		this.deviceService.getCharacteristic(Characteristic.TargetMediaState)
-			.on('get', (callback) => {
-				var state = Characteristic.TargetMediaState.STOP;
-
-				this.exec(`adb -s ${this.ip} shell "dumpsys media_session | grep state=PlaybackState"`, (err, stdout) => {
-					if(err) this.displayDebug(this.name, '- Can\'t get media status');
-					else {
-						stdout = stdout.split("\n");
-						stdout = stdout[0].trim();
-						if(stdout.includes("state=2, position=0")) state = Characteristic.TargetMediaState.STOP;
-						else if(stdout.includes("state=3")) state = Characteristic.TargetMediaState.PLAY;
-						else state = Characteristic.TargetMediaState.PAUSE;
-					}
-
-					this.deviceService.setCharacteristic(Characteristic.TargetMediaState, state);
-				});
-
-				callback(null, state);
-			})
-			.on('set', (state, callback) => {
-				var key = "";
-
-				switch(state) {
-					case Characteristic.TargetMediaState.PLAY: {
-						key = 'play';
-						break;
-					}
-					case Characteristic.TargetMediaState.PAUSE: {
-						key = 'pause';
-						break;
-					}
-					case Characteristic.TargetMediaState.STOP:
-					default: {
-						key = 'stop';
-						break;
-					}
-				}
-
-				this.exec(`adb -s ${this.ip} shell "media dispatch ${key}"`, (err) => {
-					if(err) this.displayInfo(`Can't send: ${key.toUpperCase()}`);
-					else this.displayInfo(`Sending: ${key.toUpperCase()}`);
-				});
 
 				callback(null);
 			});
@@ -668,7 +557,7 @@ class ADBPlugin {
 
 				this.exec(`adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
 					if(err) this.displayDebug(`handleRemoteControl - Can't send: ${key}`);
-					else  this.displayDebug(`handleRemoteControl - Sending: ${key}`);
+					else this.displayDebug(`handleRemoteControl - Sending: ${key}`);
 				});
 				callback(null);
 			});
@@ -785,7 +674,7 @@ class ADBPlugin {
 					// When device can't be found, set it sleep
 					if(this.awake) {
 						this.awake = !this.awake;
-						if(!this.isSpeaker()) this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
 					}
 
 					if(callback) callback('error');
@@ -794,7 +683,7 @@ class ADBPlugin {
 
 					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
 						this.awake = !this.awake;
-						if(!this.isSpeaker()) this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
 
 						this.displayDebug(`checkPower - ${this.awake}`);
 					}
@@ -984,7 +873,7 @@ class ADBPlugin {
 					that.connect();
 				} else {
 					// Check for current input
-					if(!that.isSpeaker()) that.checkInput();
+					that.checkInput();
 
 					// Check playback status
 					if(that.playbacksensor) that.checkPlayback();
