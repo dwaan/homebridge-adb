@@ -45,8 +45,7 @@ class ADBPlugin {
 		if(this.interval < 300) this.interval = 300;
 		// Exec timeout
 		this.timeout = this.config.timeout || 3000;
-		if(this.timeout < 3000) this.interval = 3000;
-		this.exectimeout = false;
+		if(this.timeout < 1000) this.interval = 1000;
 		// Inputs
 		this.inputs = this.config.inputs;
 		this.hidenumber = this.config.hidenumber;
@@ -894,29 +893,19 @@ class ADBPlugin {
 
 		if(chatty) this.displayDebug(`Running - ${cmd}`);
 		if(!this.unrecognized) {
-			this.exectimeout = false;
-
 			exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
 				stdout = stdout.trim();
 				stderr = stderr.trim();
 
-				// console.log(err, "--", stdout, "--", stderr);
-				if(err) {
-					if(stderr == notfound) {
-						this.displayDebug(`Reconnecting.`);
+				if(err && stderr == notfound) {
+					this.displayDebug(`Reconnecting.`);
 
-						this.connect(() => {
-							this.displayDebug(`Reconnected.`);
-							this.exec(cmd, callback, chatty);
-						}, (err, message) => {
-							callback(err, message);
-						});
-					} else {
-						if(stoptrying) callback(true, `Failed to execute the command.`);
-						else this.exectimeout = setTimeout(() => {
-							this.exec(cmd, callback, chatty, true);
-						}, this.timeout);
-					}
+					this.connect(() => {
+						this.displayDebug(`Reconnected.`);
+						this.exec(cmd, callback, chatty);
+					}, (err, message) => {
+						callback(err, message);
+					});
 				} else {
 					callback(stdout.includes(timeoutmessage), stdout);
 				}
