@@ -466,7 +466,7 @@ class ADBPlugin {
 						if(err) this.displayInfo(`handleInputs - Can't open ${this.inputs[this.currentInputIndex].name}`);
 						else {
 							this.currentApp = this.inputs[this.currentInputIndex].id;
-							this.displayInfo(`handleInputs -  ${this.inputs[this.currentInputIndex].name}`);
+							this.displayInfo(`handleInputs - ${this.inputs[this.currentInputIndex].name}`);
 						}
 
 						this.currentAppOnProgress = false;
