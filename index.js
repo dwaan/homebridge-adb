@@ -44,8 +44,8 @@ class ADBPlugin {
 		// Can't be lower than 300 miliseconds, it will flood your network
 		if(this.interval < 300) this.interval = 300;
 		// Exec timeout
-		this.timeout = this.config.timeout || 1000;
-		if(this.timeout < 1000) this.interval = 1000;
+		this.timeout = this.config.timeout || 3000;
+		if(this.timeout < 3000) this.interval = 3000;
 		this.exectimeout = false;
 		// Inputs
 		this.inputs = this.config.inputs;
@@ -56,7 +56,7 @@ class ADBPlugin {
 		if(!this.hidehome) this.inputs.unshift({ "name": "Home", "id": HOME_APP_ID });
 		if(!this.hideother) this.inputs.push({ "name": "Other", "id": OTHER_APP_ID });
 		// Sensor
-		this.playbacksensor = this.config.playbacksensor;
+		this.playbacksensor = this.config.playbacksensor || false;
 		this.playbacksensorexclude =  this.config.playbacksensorexclude;
 		this.playbacksensordelay = this.config.playbacksensordelay;
 		if(!this.playbacksensorexclude) this.playbacksensorexclude = "";
@@ -337,7 +337,8 @@ class ADBPlugin {
 						// Power On
 						this.deviceService.updateCharacteristic(Characteristic.Active, state);
 						this.checkInputDisplayError = false;
-
+						this.displayDebug("Trying to Turn On device");
+									
 						if(this.mac) {
 							wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
 								if(error) {
@@ -391,6 +392,7 @@ class ADBPlugin {
 					} else {
 						// Power Off
 						this.deviceService.updateCharacteristic(Characteristic.Active, state);
+						this.displayDebug("Trying to Turn Off device");
 
 						if(this.poweroffexec) {
 							this.exec(`${this.poweroffexec}`, (err, stdout) => {
@@ -892,25 +894,25 @@ class ADBPlugin {
 
 		if(chatty) this.displayDebug(`Running - ${cmd}`);
 		if(!this.unrecognized) {
+			this.exectimeout = false;
+
 			exec(cmd, { timeout: this.timeout }, (err, stdout, stderr) => {
 				stdout = stdout.trim();
 				stderr = stderr.trim();
 
-				if(stdout == "") stdout = stderr;
-				if(stderr == "") stderr = stdout;
-
+				// console.log(err, "--", stdout, "--", stderr);
 				if(err) {
-					if(stdout == notfound) {
-						this.displayDebug(`Reconnecting`);
+					if(stderr == notfound) {
+						this.displayDebug(`Reconnecting.`);
 
 						this.connect(() => {
-							this.displayDebug(`Reconnected`);
+							this.displayDebug(`Reconnected.`);
 							this.exec(cmd, callback, chatty);
 						}, (err, message) => {
 							callback(err, message);
 						});
 					} else {
-						if(stoptrying) callback(true, `Failed execute the command.`, `Failed execute the command.`);
+						if(stoptrying) callback(true, `Failed to execute the command.`);
 						else this.exectimeout = setTimeout(() => {
 							this.exec(cmd, callback, chatty, true);
 						}, this.timeout);

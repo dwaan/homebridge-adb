@@ -37,9 +37,9 @@
 						},
 						"timeout": {
 							"type": "number",
-							"title": "Timeout",
+							"title": "ADB Timeout",
 							"placeholder": "Timeout for ADB commnad",
-							"default": "1000",
+							"default": "3000",
 					        "oneOf": [
 								{ "title": "1000", "enum": ["1000"] },
 								{ "title": "2000", "enum": ["2000"] },
@@ -134,7 +134,7 @@
 					        ]
 						},
 						"playbacksensor": {
-							"type": "string",
+							"type": "boolean",
 							"title": "Playback as Motion Sensor",
 							"placeholder": "Playback as Motion Sensor",
 							"default": "",
@@ -145,7 +145,7 @@
 						},
 						"playbacksensordelay": {
 							"type": "number",
-							"title": "Playback as Motion Sensor delay",
+							"title": "Sensor delay (ms)",
 							"placeholder": "Playback as Motion Sensor delay",
 							"default": "500",
 					        "oneOf": [
@@ -159,8 +159,8 @@
 						},
 						"playbacksensorexclude": {
 							"type": "string",
-							"title": "Exclude this app from Playback Sensor (ms)",
-							"placeholder": "Exclude this app from Playback Sensor in miliseconds",
+							"title": "Exclude this app from Playback Sensor",
+							"placeholder": "Exclude this app from Playback Sensor",
 							"default": ""
 						},
 						"debug": {
@@ -332,7 +332,7 @@
 							"title": "Playback Sensor",
 							"expandable": true,
 							"expanded": false,
-							"description": "Create motion sensor based on media playback activities",
+							"description": "Create motion sensor based on media playback activities (limited device support)",
 							"items": [
 								{
 									"type": "flex",
@@ -341,10 +341,6 @@
 									"items": [
 										{
 											"key": "accessories[].playbacksensor",
-											"flex": "1 1 100px"
-										},
-										{
-											"key": "accessories[].playbacksensordelay",
 											"flex": "1 1 100px"
 										}
 									]
@@ -355,7 +351,12 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].playbacksensorexclude"
+											"key": "accessories[].playbacksensordelay",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].playbacksensorexclude",
+											"flex": "2 2 200px"
 										}
 									]
 								}
