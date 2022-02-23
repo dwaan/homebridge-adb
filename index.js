@@ -151,7 +151,7 @@ class ADBPlugin {
 		// Get the accesory information and send it to HomeBridge
 		this.exec(`adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
 			if(err) {
-				this.log.error(`\n\nWARNING: Unrecognized device - "${this.name}".\nPlease check if the device IP address is correct.\n`);
+				this.log.error(`\n\nWARNING: Unrecognized device - "${this.name}".\nPlease check if the device IP address is correct\nor if your device is turned off, please turn it on.\n`);
 			} else {
 				// Handle On Off
 				this.handleOnOff();
@@ -664,39 +664,6 @@ class ADBPlugin {
 		}
 	}
 
-	checkPower(callback) {
-		if(!this.unrecognized && !this.wol && !this.checkPowerOnProgress && !this.handleOnOffOnProgress) {
-			this.checkPowerOnProgress = true;
-
-			this.exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout) => {
-				if(this.wol) {
-					this.deviceService.getCharacteristic(Characteristic.Active).updateValue(true);
-				} else if(err) {
-					// When device can't be found, set it sleep
-					if(this.awake) {
-						this.awake = !this.awake;
-						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
-					}
-
-					if(callback) callback('error');
-				} else {
-					let output = stdout.split('=')[1];
-
-					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
-						this.awake = !this.awake;
-						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
-
-						this.displayDebug(`checkPower - ${this.awake}`);
-					}
-
-					if(callback) callback(this.awake);
-				}
-
-				this.checkPowerOnProgress = false;
-			});
-		}
-	}
-
 	checkInput() {
 		var that = this;
 		var parseInput = function(stdout) {
@@ -804,17 +771,56 @@ class ADBPlugin {
 			
 			if(this.checkInputUseActivities < 0 && this.checkInputUseWindows < 0 && this.checkInputDisplayError) {
 				this.checkInputDisplayError = false;
-				that.displayInfo(`Can't read current app from device. Turn OFF then turn ON your device to fix it.`);
+				that.displayInfo(`Can't read current app from device.`);
 			}
 		}
 	}
 
+	// Check if device is on based on screen status
+	checkPower(callback) {
+		if(!this.unrecognized && !this.wol && !this.checkPowerOnProgress && !this.handleOnOffOnProgress) {
+			this.checkPowerOnProgress = true;
+
+			exec(`adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, { timeout: this.timeout }, (err, stdout, stderr) => {
+				stdout = stdout.trim();
+				stderr = stderr.trim();
+
+				if(stdout == "") stdout = stderr;
+				if(stderr == "") stderr = stdout;
+
+				if(err) {
+					// When device can't be found, set it sleep
+					if(this.awake) {
+						this.awake = !this.awake;
+						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+					}
+
+					if(callback) callback('error');
+				} else {
+					let output = stdout.split('=')[1];
+
+					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
+						this.awake = !this.awake;
+						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+
+						this.displayDebug(`checkPower - ${this.awake}`);
+					}
+
+					if(callback) callback(this.awake);
+				}
+
+				this.checkPowerOnProgress = false;
+			});
+		}
+	}
+
+	// Connect to the device
 	connect(callback, callbackerror) {
 		var that = this;
 
+		that.displayDebug(`Reconnecting...`);
 		exec(`adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout, stderr) => {
 			var message = "";
-			var reconnect = false;
 
 			stdout = stdout.trim();
 			stderr = stderr.trim();
@@ -822,32 +828,28 @@ class ADBPlugin {
 			if(stdout == "") stdout = stderr;
 			if(stderr == "") stderr = stdout;
 
+			this.unrecognized = false;
 			if(stdout.includes(`device still authorizing`)) {
 				err = false;
-				reconnect = true;
 				message = `Device still authorizing. Please wait.`;
 			} else if(stdout.includes(`device unauthorized.`)) {
 				err = false;
-				reconnect = true;
 				message = `Unauthorized device. Please check your device screen for authorization popup.`;
 			} else if(stdout.includes(`Connection refused`)) {
 				err = true;
-				reconnect = false;
 				message = `Unrecognized device. Please check your configuration for incorrect IP address.`;
 				this.unrecognized = true;
 			} else if(stdout.includes(`Operation timed out. Reconnecting.`)) {
 				err = false;
-				reconnect = true;
 				message= `Connection timeout. Reconnecting.`
-			} else if(err) {
-				reconnect = true;
+			} else if(err || stdout.includes(`failed to connect`)) {
 				message = `Device disconnected or turned off? Reconnecting.`;
 			}
 			
 			if(message) {
 				if(!this.unrecognized) {
 					that.displayInfo(`${message}`);
-					// When ADB server get killed, adb connect will return the connection in approx 7 seconds
+					// When ADB server get killed, "adb connect" will return the connection in approx 7 seconds
 					exec(`adb connect ${this.ip}`, { timeout: 10000 }, (err) => {
 						if(!err) {
 							that.displayInfo(`Reconnected`);
@@ -858,26 +860,25 @@ class ADBPlugin {
 
 				if(callbackerror) callbackerror(err, message);
 			} else {
+				that.displayDebug(`Reconnected`);
 				if(callback) callback();
 			}
 		});
 	}
 
+	// The main loop to check device power, input, and playback status.
 	update() {
-		var that = this;
-
 		// Update device status every second -> or based on configuration
 		this.intervalHandler = setInterval(() => {
-			that.checkPower(function(result) {
-				if(result == 'error') {
+			this.checkPower((awake) => {
+				if(awake == 'error') {
 					// Can't check the device power status, try reconnect
-					that.connect();
-				} else {
-					// Check for current input
-					that.checkInput();
-
-					// Check playback status
-					if(that.playbacksensor) that.checkPlayback();
+					this.connect();
+				} else if(awake) {
+					// Check for current input when device is on
+					this.checkInput();
+					// Check playback status when device is on
+					if(this.playbacksensor) this.checkPlayback();
 				}
 			});
 		}, this.interval);
@@ -887,9 +888,11 @@ class ADBPlugin {
 	//////////
 	// Helpers
 
-	exec(cmd, callback, chatty, stoptrying) {
+	exec(cmd, callback, chatty) {
 		let timeoutmessage = `Operation timed out`;
 		let notfound = `error: device '${this.ip}' not found`;
+		let closed = `error: closed`;
+		let offline = `error: device offline`;
 
 		if(chatty) this.displayDebug(`Running - ${cmd}`);
 		if(!this.unrecognized) {
@@ -897,11 +900,11 @@ class ADBPlugin {
 				stdout = stdout.trim();
 				stderr = stderr.trim();
 
-				if(err && stderr == notfound) {
-					this.displayDebug(`Reconnecting.`);
+				if(stdout == "") stdout = stderr;
+				if(stderr == "") stderr = stdout;
 
+				if(err && (stdout.includes(notfound) || stdout.includes(closed) || stdout.includes(offline))) {
 					this.connect(() => {
-						this.displayDebug(`Reconnected.`);
 						this.exec(cmd, callback, chatty);
 					}, (err, message) => {
 						callback(err, message);
