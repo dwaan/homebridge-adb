@@ -28,6 +28,11 @@
 							"format": "ipv4",
 							"required": true
 						},
+						"path": {
+							"type": "string",
+							"title": "ADB Path",
+							"placeholder": "Type the complete of your ADB, eg: /usr/bin/ or c:\\adb-tools\\"
+						},
 						"mac": {
 							"type": "string",
 							"title": "MAC address",
@@ -39,7 +44,7 @@
 							"type": "number",
 							"title": "ADB Timeout",
 							"placeholder": "Timeout for ADB commnad",
-							"default": "3000",
+							"default": "",
 					        "oneOf": [
 								{ "title": "1000", "enum": ["1000"] },
 								{ "title": "2000", "enum": ["2000"] },
@@ -52,7 +57,7 @@
 							"type": "number",
 							"title": "Polling interval",
 							"placeholder": "Check your device every n miliseconds",
-							"default": "5000",
+							"default": "",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -66,7 +71,7 @@
 							"type": "string",
 							"title": "Category",
 							"placeholder": "Pick a category that suitable for your",
-							"default": "TELEVISION",
+							"default": "",
 					        "oneOf": [
 								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
 								{ "title": "Television", "enum": ["TELEVISION"] },
@@ -147,7 +152,7 @@
 							"type": "number",
 							"title": "Sensor delay (ms)",
 							"placeholder": "Playback as Motion Sensor delay",
-							"default": "500",
+							"default": "",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -186,23 +191,23 @@
 						"backbutton": {
 							"type": "string",
 							"title": "Back Button",
-							"placeholder": "Type your custom 'back' key code",
+							"placeholder": "eg: KEYCODE_BACK",
 							"minLength": 9,
-							"default": "KEYCODE_BACK"
+							"default": ""
 						},
 						"playpausebutton": {
 							"type": "string",
 							"title": "Play/Pause Button",
-							"placeholder": "Type your custom 'play/pause' key code",
+							"placeholder": "eg: KEYCODE_MEDIA_PLAY_PAUSE",
 							"minLength": 9,
-							"default": "KEYCODE_MEDIA_PLAY_PAUSE"
+							"default": ""
 						},
 						"infobutton": {
 							"type": "string",
 							"title": "Info Button",
-							"placeholder": "Type your custom 'info' key code",
+							"placeholder": "eg: KEYCODE_HOME",
 							"minLength": 9,
-							"default": "KEYCODE_HOME"
+							"default": ""
 						},
 						"poweron": {
 							"type": "string",
@@ -263,6 +268,16 @@
 								{
 									"key": "accessories[].category",
 									"flex": "1 1 100px"
+								}
+							]
+						},
+						{
+							"type": "flex",
+							"displayFlex": true,
+							"flex-direction": "row",
+							"items": [
+								{
+									"key": "accessories[].path"
 								}
 							]
 						},

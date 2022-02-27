@@ -147,12 +147,13 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the device.
 * **ip** (mandatory): the IP address of the device.
 * *mac* (optional): the MAC address of the device. When provided and your device support Wake On LAN, this plugin will try to use Wake On LAN to Turn On your device. Useful if your device disconnect ADB connection after it turned off.
+* *path* (optional): if you prefer using direct path to access ADB instead of setting up in your global path, you can type the path here.
+* *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
+* *timeout* (optional): if not set, the plugin will limit ADB execution timeout to 1000 miliseconds.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you leave this blank, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.
 	* *name* (mandatory): the name of the input.
 	* *id* (mandatory): the application id. The id will be use for input switcher in Home app. If you put random id, the input will move to "other".
 	* *adb* (optional): you can run your own ADB shell command here, such as: `monkey -p com.app.id 1`. This is an ADB shell command, so you doesn't need to type "adb -s ipaddress shell ...".
-* *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
-* *timeout* (optional): if not set, the plugin will limit ADB execution timeout to 1000 miliseconds.
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.
 * *infobutton*, *playpauseobutton*, *backbutton* (optional): assign custom key event code for Remote control in iOS Control Center, see [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the key codes.
