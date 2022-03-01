@@ -1,18 +1,25 @@
 let wol = require('wake_on_lan');
 let exec = require('child_process').exec;
-let Service, Characteristic, Homebridge, Accessory;
+let Service, Characteristic;
 
 const PLUGIN_NAME 	= 'homebridge-adb';
 const PLATFORM_NAME = 'HomebridgeADB';
 
+const ON = true;
+const OFF = false;
+const YES = true;
+const NO = false;
+const ONLINE = true;
+const OFFLINE = false;
+const PLAY = true;
+const PAUSE = false;
+const EMPTY = "";
 const OTHER_APP_ID = "other";
 const HOME_APP_ID = "home";
 
 module.exports = (homebridge) => {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
-	Homebridge = homebridge;
-	Accessory = homebridge.platformAccessory;
 	homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, ADBPluginPlatform, true);
 };
 
@@ -27,7 +34,7 @@ class ADBPlugin {
 
 		// Configuration
 		// Name
-		this.name = this.config.name || 'Android Device';
+		this.name = this.config.name || 'Android Accessory';
 		// Path
 		this.path = this.config.path || "";
 		// IP
@@ -39,7 +46,7 @@ class ADBPlugin {
 		// Mac
 		this.mac = this.config.mac || "";
 		// Interval
-		this.interval = this.config.interval || 5000;
+		this.interval = this.config.interval || 1000;
 		// Can't be lower than 300 miliseconds, it will flood your network
 		if(this.interval < 300) this.interval = 300;
 		// Show more debug
@@ -47,8 +54,9 @@ class ADBPlugin {
 		// Skip speaker creation
 		this.skipSpeaker = this.config.skipSpeaker || false;
 		// Exec timeout
-		this.timeout = this.config.timeout || 3000;
-		if(this.timeout < 1000) this.interval = 1000;
+		this.timeout = this.config.timeout || 1000;
+		if(this.timeout < 1000) this.timeout = 1000;
+		this.basetimeout = this.timeout;
 		// Inputs
 		this.inputs = this.config.inputs || [];
 		this.hidenumber = this.config.hidenumber || false;
@@ -71,36 +79,47 @@ class ADBPlugin {
 		this.category = this.config.category || "TELEVISION";
 		this.category = this.category.toUpperCase();
 
-		// Variable
-		this.wol = false;
-		this.woltimeout = false;
-		this.awake = false;
-		this.playing = false;
-		this.currentInputIndex = 0;
-		this.currentApp = false;
-		this.currentAppOnProgress = false;
-		this.checkPowerOnProgress = false;
-		this.checkPlaybackProgress = false;
-		this.prevStdout = "";
-
-		// Playback
-		this.noPlaybackSensor = false;
-		this.useTail = undefined;
-		this.useHead = undefined;
-
-		// Check Input
-		this.checkInputDisplayError = true;
-		this.checkInputUseActivities = 0;
-		this.checkInputUseWindows = 0; 
+		// Accessory status
+		this.adbAccessory = {
+			connecting: false,
+			status: ONLINE,
+			power: {
+				status: ON,
+				onprogress: false,
+				onstatuschange: false
+			},
+			wol: {
+				use: NO,
+				loop: EMPTY
+			},
+			app: {
+				id: EMPTY,
+				onprogress: false
+			},
+			input: {
+				index: 0,
+				error: NO,
+				useactivities: 0,
+				usewindows: 0,
+				onprogress: NO,
+				onstatuschange: false
+			},
+			playback: {
+				status: PAUSE,
+				sensor: NO,
+				usetail: undefined,
+				onprogress: NO
+			}
+		}
 
 		// Debug and Info
-		this.prevDebugMessage = ["", ""];
-		this.prevInfoMessage = "";
-
-		// Extra
-		this.unrecognized = false;
-		this.handleOnOffOnProgress = false;
-
+		this.message = {
+			stdout: {
+				prev: ""
+			},
+			info: "",
+			debug: ["", ""]
+		}
 
 		/**
 		 * Create the accessory
@@ -111,31 +130,33 @@ class ADBPlugin {
 		const uuidos = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name + "OccupancySensor");
 
 		// create the external accessory
-		this.device = new this.api.platformAccessory(this.name, uuid);
+		this.accessory = new this.api.platformAccessory(this.name, uuid);
+		// create the playback sensor accesory
+		if(this.playbacksensor) this.accessoryPlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
 
 		// set the external accessory category
 		if(this.category == "SPEAKER")
-			this.device.category = this.api.hap.Categories.SPEAKER;
+			this.accessory.category = this.api.hap.Categories.SPEAKER;
 		else if(this.category == "TV_STREAMING_STICK")
-			this.device.category = this.api.hap.Categories.TV_STREAMING_STICK;
+			this.accessory.category = this.api.hap.Categories.TV_STREAMING_STICK;
 		else if(this.category == "TV_SET_TOP_BOX")
-			this.device.category = this.api.hap.Categories.TV_SET_TOP_BOX;
+			this.accessory.category = this.api.hap.Categories.TV_SET_TOP_BOX;
 		else if(this.category == "AUDIO_RECEIVER")
-			this.device.category = this.api.hap.Categories.AUDIO_RECEIVER;
+			this.accessory.category = this.api.hap.Categories.AUDIO_RECEIVER;
 		else if(this.category == "APPLE_TV")
-			this.device.category = this.api.hap.Categories.APPLE_TV;
+			this.accessory.category = this.api.hap.Categories.APPLE_TV;
 		else
-			this.device.category = this.api.hap.Categories.TELEVISION;
+			this.accessory.category = this.api.hap.Categories.TELEVISION;
 
-		// add the device service
-		this.deviceService = this.device.addService(Service.Television);
+		// add the accessory service
+		this.accessoryService = this.accessory.addService(Service.Television);
 
-		// get device information
-		this.deviceInfo = this.device.getService(Service.AccessoryInformation);
+		// get accessory information
+		this.accessoryInfo = this.accessory.getService(Service.AccessoryInformation);
 
-		// set device service name
-		this.deviceService.setCharacteristic(Characteristic.ConfiguredName, this.name);
-		this.deviceService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
+		// set accessory service name
+		this.accessoryService.setCharacteristic(Characteristic.ConfiguredName, this.name);
+		this.accessoryService.setCharacteristic(Characteristic.SleepDiscoveryMode, Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
 		/**
 		 * Publish as external accessory
@@ -144,46 +165,43 @@ class ADBPlugin {
 
 		this.displayInfo(`Initializing`);
 
-		// Get the accesory information and send it to HomeBridge
+		// Get the accessory information and send it to HomeBridge
 		this.exec(`${this.path}adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
-			if(err) {
-				this.log.error(`\n\nWARNING:\nUnrecognized device - "${this.name}".\nPlease check if the device IP address is correct.\nIf your device is turned off, please turn it on\nand restart this plugin.\n`);
-			} else {
-				// Get device information
-				stdout = stdout.split("\n");
+			// Get accessory information
+			if(err) stdout = ["", "", ""];
+			else stdout = stdout.split("\n");
 
-				// Check if device have tail and head command
-				this.checkTailHead();
+			// Handle On Off
+			this.handleOnOff();
 
-				// Handle On Off
-				this.handleOnOff();
+			if(this.inputs.length > 0) {
+				// Create inputs
+				this.createInputs();
 
-				if(this.inputs.length > 0) {
-					// Create inputs
-					this.createInputs();
-
-					// Handle inputs
-					this.handleInputs();
-				}
-
-				// Show Control Center Remote if needed
-				this.handleRemoteControl();
-
-				// Create speaker services
-				this.createTelevisionSpeakers();
-
-				// Publish tv accessories
-				this.createTelevision(stdout);
-
-				// Playback sensor
-				this.createPlaybackSensor(uuidos, stdout);
-
-				// Device finish initialzing
-				this.displayInfo(`Device initialized.`);
-
-				// Loop the power status
-				this.update();
+				// Handle inputs
+				this.handleInputs();
 			}
+
+			// Show Control Center Remote if needed
+			this.handleRemoteControl();
+
+			// Create speaker services
+			this.createTelevisionSpeakers();
+
+			// Publish tv accessories
+			this.createTelevision(stdout);
+
+			// Playback sensor
+			this.createPlaybackSensor(stdout);
+
+			// Accessory finish initialzing
+			this.displayInfo(`Accessory initialized.`);
+
+			// Loop the power status
+			this.update();
+
+			// Display error when can't connect to accessory
+			if(err) this.log.error(`\n\nWARNING:\nUnrecognized accessory - "${this.name}".\nPlease check if the accessory IP address is correct.\nIf your accessory is turned OFF, please turn it ON.\n`);
 		});
 	}
 
@@ -192,19 +210,19 @@ class ADBPlugin {
 	 * @param {string} stdout ADB output
 	 */
 	createTelevision(stdout) {
-		this.deviceInfo
+		this.accessoryInfo
 			.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
-			.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
+			.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Homebridge ADB")
 			.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
-		this.api.publishExternalAccessories(PLUGIN_NAME, [this.device]);
-		this.displayDebug(`Device created`);
+		this.api.publishExternalAccessories(PLUGIN_NAME, [this.accessory]);
+		this.displayDebug(`Accessory created`);
 	}
 
 	/**
-	 * Create Device Input Source Services
+	 * Create Accessory Input Source Services
 	 * These are the inputs the user can select from.
 	 * When a user selected an input the corresponding Identifier Characteristic
-	 * is sent to the device Service ActiveIdentifier Characteristic handler.
+	 * is sent to the Accessory Service ActiveIdentifier Characteristic handler.
 	 * This plugins will create 50 inputs (- current inputs) unconfigured
 	 * and hidden input for future modification. Home app seems have problem
 	 * to add new input after initial add of the accessory. The newly
@@ -238,8 +256,8 @@ class ADBPlugin {
 				if(!this.hidenumber) name = `${humanNumber}. ${name}`;
 			}
 
-			this.displayDebug(this.name, name, targetVisibility, currentVisibility);
-			let service = this.device.addService(Service.InputSource, `Input - ${name}`, i);
+			if(targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`Input: ${name}`);
+			let service = this.accessory.addService(Service.InputSource, `Input - ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
 				.setCharacteristic(Characteristic.ConfiguredName, name)
@@ -247,7 +265,7 @@ class ADBPlugin {
 				.setCharacteristic(Characteristic.TargetVisibilityState, targetVisibility)
 				.setCharacteristic(Characteristic.CurrentVisibilityState, currentVisibility)
 				.setCharacteristic(Characteristic.IsConfigured, configured);
-			this.deviceService.addLinkedService(service);
+			this.accessoryService.addLinkedService(service);
 
 			if(configured == Characteristic.IsConfigured.CONFIGURED) {
 				this.inputs[i].service = service;
@@ -259,15 +277,15 @@ class ADBPlugin {
 	 * Create a speaker service to allow volume control
 	 */
 	createTelevisionSpeakers() {
-		 if(!this.skipSpeaker) {
-			this.deviceTelevisionSpeakerService = this.device.addService(Service.TelevisionSpeaker);
+		if(!this.skipSpeaker) {
+			this.accessoryTelevisionSpeakerService = this.accessory.addService(Service.TelevisionSpeaker);
 
-			this.deviceTelevisionSpeakerService
+			this.accessoryTelevisionSpeakerService
 				.setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
 				.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.RELATIVE); // RELATIVE or ABSOLUTE
 
 			// Volume control
-			this.deviceTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
+			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
 				.on('set', (state, callback) => {
 					let key = state ? "KEYCODE_VOLUME_DOWN" : "KEYCODE_VOLUME_UP";
 
@@ -280,7 +298,7 @@ class ADBPlugin {
 				});
 
 			// Mute control - not implemented yet
-			this.deviceTelevisionSpeakerService.getCharacteristic(Characteristic.Mute)
+			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.Mute)
 				.on('get', (callback) => {
 					callback(null, 0);
 				})
@@ -288,7 +306,7 @@ class ADBPlugin {
 					callback(null);
 				});
 
-			this.deviceService.addLinkedService(this.deviceTelevisionSpeakerService);
+			this.accessoryService.addLinkedService(this.accessoryTelevisionSpeakerService);
 
 			this.displayDebug(`Speaker created`);
 		}
@@ -298,21 +316,20 @@ class ADBPlugin {
 	 * Create a playback sensor based on video playback
 	 * Due to limitation of ADB, support for playback will be limited
 	 */
-	createPlaybackSensor(uuidos, stdout) {
+	createPlaybackSensor(stdout) {
 		if(this.playbacksensor) {
 			// Add playback sensor
-			this.devicePlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
-			this.devicePlaybackSensor.category = this.api.hap.Categories.SENSOR;
-			this.devicePlaybackSensorInfo = this.devicePlaybackSensor.getService(Service.AccessoryInformation);
-			this.devicePlaybackSensorService = this.devicePlaybackSensor.addService(Service.MotionSensor);
+			this.accessoryPlaybackSensor.category = this.api.hap.Categories.SENSOR;
+			this.accessoryPlaybackSensorInfo = this.accessoryPlaybackSensor.getService(Service.AccessoryInformation);
+			this.accessoryPlaybackSensorService = this.accessoryPlaybackSensor.addService(Service.MotionSensor);
 			this.handleMediaAsSensor();
 
 			// Publish playback sensor
-			this.devicePlaybackSensorInfo
+			this.accessoryPlaybackSensorInfo
 				.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
-				.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Google")
+				.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Homebridge ADB")
 				.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
-			this.api.publishExternalAccessories(PLUGIN_NAME, [this.devicePlaybackSensor]);
+			this.api.publishExternalAccessories(PLUGIN_NAME, [this.accessoryPlaybackSensor]);
 			this.displayDebug(`Sensor created`);
 		}
 	}
@@ -321,17 +338,17 @@ class ADBPlugin {
 	 * Handle On/Off
 	 */
 	handleOnOff() {
-		this.deviceService.getCharacteristic(Characteristic.Active)
+		this.accessoryService.getCharacteristic(Characteristic.Active)
 			.on('set', (state, callback) => {
-				if(state != this.awake && !this.handleOnOffOnProgress) {
+				if(state != this.adbAccessory.power.status && !this.adbAccessory.power.onstatusprogress) {
 					// Prevent double run
-					this.handleOnOffOnProgress = true;
+					this.adbAccessory.power.onstatusprogress = true;
 
 					if(state) {
 						// Power On
-						this.deviceService.updateCharacteristic(Characteristic.Active, state);
-						this.checkInputDisplayError = false;
-						this.displayDebug("Trying to Turn On device");
+						this.accessoryService.updateCharacteristic(Characteristic.Active, state);
+						this.adbAccessory.input.error = NO;
+						this.displayDebug("Trying to turn on accessory");
 									
 						if(this.mac) {
 							wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
@@ -339,21 +356,21 @@ class ADBPlugin {
 									this.displayInfo("Wake On LAN - Power On - Failed");
 									state = !state;
 								} else {
-									// Forcing device status on
-									this.wol = true;
-									this.awake = true;
+									// Forcing accessory status on
+									this.adbAccessory.wol.use = true;
+									this.adbAccessory.power.status = ON;
 									this.displayDebug("Wake On LAN - Power On");
 									// After 3 seconds,  WOL status will be reset, 
-									// and let ADB get the power status from device
-									this.woltimeout = setTimeout(() => {
+									// and let ADB get the power status from accessory
+									this.adbAccessory.wol.loop = setTimeout(() => {
 										this.displayDebug("Wake On LAN - Reset");
-										this.wol = false;
-										this.woltimeout = false;
+										this.adbAccessory.wol.use = false;
+										this.adbAccessory.wol.loop = false;
 									}, 3000);
 								}
 
-								this.handleOnOffOnProgress = false;
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								this.adbAccessory.power.onstatusprogress = false;
+								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else if(this.poweronexec) {
 							this.exec(`${this.poweronexec}`, (err, stdout) => {
@@ -366,8 +383,8 @@ class ADBPlugin {
 									this.displayDebug("Executable - Power On");
 								}
 
-								this.handleOnOffOnProgress = false;
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								this.adbAccessory.power.onstatusprogress = false;
+								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
 							this.execWithTimeout(`${this.path}adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, 15000, (err, stdout) => {
@@ -379,14 +396,14 @@ class ADBPlugin {
 									this.displayDebug("ADB - Power On");
 								}
 
-								this.handleOnOffOnProgress = false;
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								this.adbAccessory.power.onstatusprogress = false;
+								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							}, true);
 						}
 					} else {
 						// Power Off
-						this.deviceService.updateCharacteristic(Characteristic.Active, state);
-						this.displayDebug("Trying to Turn Off device");
+						this.accessoryService.updateCharacteristic(Characteristic.Active, state);
+						this.displayDebug("Trying to turn off accessory");
 
 						if(this.poweroffexec) {
 							this.exec(`${this.poweroffexec}`, (err, stdout) => {
@@ -399,8 +416,8 @@ class ADBPlugin {
 									this.displayDebug("Executable - Power Off");
 								}
 
-								this.handleOnOffOnProgress = false;
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								this.adbAccessory.power.onstatusprogress = false;
+								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							});
 						} else {
 							this.exec(`${this.path}adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`,(err, stdout) => {
@@ -412,8 +429,8 @@ class ADBPlugin {
 									this.displayDebug("ADB - Power Off");
 								}
 
-								this.handleOnOffOnProgress = false;
-								this.deviceService.updateCharacteristic(Characteristic.Active, state);
+								this.adbAccessory.power.onstatusprogress = false;
+								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							});
 						}
 					}
@@ -421,12 +438,10 @@ class ADBPlugin {
 
 				callback(null);
 			}).on('get', (callback) => {
-				this.checkPowerOnProgress = false;
-				this.checkPower(() => {
-					this.deviceService.setCharacteristic(Characteristic.Active, this.awake);
-				});
+				this.adbAccessory.power.onstatusprogress = false;
+				this.checkPower();
 
-				callback(null, this.awake);
+				callback(null, this.adbAccessory.power.status);
 			});
 	}
 
@@ -434,40 +449,42 @@ class ADBPlugin {
 	 * Handle input change
 	 */
 	handleInputs() {
-		this.deviceService.getCharacteristic(Characteristic.ActiveIdentifier)
+		this.accessoryService.getCharacteristic(Characteristic.ActiveIdentifier)
 			.on('set', (state, callback) => {
-				if(!this.currentAppOnProgress) {
+				if(this.adbAccessory.input.onstatuschange == NO) {
 					let adb = `${this.path}adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
-					this.currentAppOnProgress = true;
-					this.currentInputIndex = state;
+					this.adbAccessory.input.onstatuschange = YES;
+					this.adbAccessory.input.index = state;
 
-					if(this.currentInputIndex != 0 && this.inputs[this.currentInputIndex].id != OTHER_APP_ID) {
-						let type = this.inputs[this.currentInputIndex].id.trim();
+					// Accessory what kind of command that the input is
+					if(this.adbAccessory.input.index != 0 && this.inputs[this.adbAccessory.input.index].id != OTHER_APP_ID) {
+						let type = this.inputs[this.adbAccessory.input.index].id.trim();
 
-						if(this.inputs[this.currentInputIndex].adb) {
+						if(this.inputs[this.adbAccessory.input.index].adb) {
 							// Run specific custom ADB command
-							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].adb}"`;
-							this.displayDebug(`Running - ADB command - ${this.inputs[this.currentInputIndex].adb}`);
+							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].adb}"`;
+							this.displayDebug(`Running - ADB command - ${this.inputs[this.adbAccessory.input.index].adb}`);
 						} else if(!type.includes(" ") && type.includes(".")) {
 							// Run app based on given valid id
-							adb = `${this.path}adb -s ${this.ip} shell "monkey -p ${this.inputs[this.currentInputIndex].id} 1"`;
-							this.displayDebug(`Running - App - ${this.inputs[this.currentInputIndex].id}`);
+							adb = `${this.path}adb -s ${this.ip} shell "monkey -p ${this.inputs[this.adbAccessory.input.index].id} 1"`;
+							this.displayDebug(`Running - App - ${this.inputs[this.adbAccessory.input.index].id}`);
 						} else {
 							// Run ID as it's an ADB command
-							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.currentInputIndex].id}"`;
-							this.displayDebug(`Running - ${this.inputs[this.currentInputIndex].id}`);
+							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].id}"`;
+							this.displayDebug(`Running - ${this.inputs[this.adbAccessory.input.index].id}`);
 						}
 					}
 
 					this.exec(adb, (err) => {
-						if(err) this.displayInfo(`handleInputs - Can't open ${this.inputs[this.currentInputIndex].name}`);
+						if(err) this.displayInfo(`Can't open ${this.inputs[this.adbAccessory.input.index].name}`);
 						else {
-							this.currentApp = this.inputs[this.currentInputIndex].id;
-							this.displayInfo(`handleInputs - ${this.inputs[this.currentInputIndex].name}`);
+							this.adbAccessory.app.id = this.inputs[this.adbAccessory.input.index].id;
+							this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, this.adbAccessory.input.index);
+							this.displayInfo(`Current app: ${this.inputs[this.adbAccessory.input.index].name}`);
 						}
 
-						this.currentAppOnProgress = false;
+						this.adbAccessory.input.onstatuschange = NO;
 					});
 				}
 
@@ -479,13 +496,14 @@ class ADBPlugin {
 	 * Handle playback sensor
 	 */
 	handleMediaAsSensor() {
-		// handle [media state]
-		this.devicePlaybackSensorService.getCharacteristic(Characteristic.MotionDetected)
+		this.accessoryPlaybackSensorService.getCharacteristic(Characteristic.MotionDetected)
 			.on('get', (callback) => {
 				var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
-				if(this.playing) state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
+				if(this.adbAccessory.playback.status) state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
 
+				// Check playback status
 				this.checkPlayback();
+
 				callback(null, state);
 			});
 	}
@@ -495,7 +513,7 @@ class ADBPlugin {
 	 */
 	handleRemoteControl() {
 		// handle [remote control]
-		this.deviceService.getCharacteristic(Characteristic.RemoteKey)
+		this.accessoryService.getCharacteristic(Characteristic.RemoteKey)
 			.on('set', (state, callback) => {
 				var key = "";
 
@@ -568,18 +586,10 @@ class ADBPlugin {
 	/**
 	 * Check whether to use tail or head for more optimized output
 	 */
-	checkTailHead() {
-		if(this.useTail === undefined) this.exec(`${this.path}adb -s ${this.ip} shell "tail --help"`, (err) => {
-			if(err) {
-				this.displayDebug(`Can't use tail command.`);
-				this.useTail = false;
-			} else this.useTail = true;
-		});
-		if(this.useHead === undefined) this.exec(`${this.path}adb -s ${this.ip} shell "head --help"`, (err) => {
-			if(err) {
-				this.displayDebug(`Can't use head command`);
-				this.useHead = false;
-			} else this.useHead = true;
+	checkTail() {
+		if(this.adbAccessory.playback.usetail === undefined) this.exec(`${this.path}adb -s ${this.ip} shell "tail --help"`, (err) => {
+			if(err) this.adbAccessory.playback.usetail = NO;
+			else this.adbAccessory.playback.usetail = YES;
 		});
 	}
 
@@ -587,64 +597,62 @@ class ADBPlugin {
 	 * Check if a video is playing
 	 */
 	checkPlayback() {
-		var that = this;
-		var changed = false;
-		var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
-		var tail = "";
-		var head = ""
+		if(this.playbacksensor) {
+			// Check if accessory have tail and head command
+			this.checkTail();
 
-		if(this.useHead === true) head = " | head -1";
-		if(this.useTail === true) tail = " | tail -1";
+			var changed = false;
+			var state = Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED;
+			var tail = this.adbAccessory.playback.usetail === true ? " | tail -1" : "";
 
-		if(!this.awake) {
-			// When device is asleep, set the sensor off
-			if(this.playing) {
-				this.displayDebug(`checkPlayback - device is asleep`);
-				this.playing = false;
-				this.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
-			}
-		} else if(!this.checkPlaybackProgress && this.currentApp && !this.playbacksensorexclude.includes(this.currentApp)) {
-			if(!this.noPlaybackSensor) {
-				var changeState = function(state, stdout) {
+			if(this.adbAccessory.power.status == OFF) {
+				// When accessory is asleep, set the sensor off
+				if(this.adbAccessory.playback.status == PLAY) {
+					this.displayDebug(`Playback sensor is OFF when accessory is OFF`);
+					this.adbAccessory.playback.status = PAUSE;
+					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, state);
+				}
+			} else if(this.adbAccessory.playback.onprogress == NO && this.adbAccessory.app.id && !this.playbacksensorexclude.includes(this.adbAccessory.app.id)) {
+				var changeState = (state, stdout) => {
 					if(changed) {
-						that.playbacksrsensortimeout = setTimeout(function() {
-							if(stdout) that.displayDebug(`checkPlayback - ${stdout}`);
-							that.displayDebug(`checkPlayback - Current app - ${that.currentApp}`);
-							that.displayDebug(`checkPlayback - ${that.playing}`);
-							that.displayInfo(`Media playing - ${that.playing}`);
-							that.devicePlaybackSensorService.setCharacteristic(Characteristic.MotionDetected, state);
-						}, that.playbacksensordelay);
+						this.playbacksrsensortimeout = setTimeout(() => {
+							if(stdout) this.displayDebug(`Playback: ${stdout}`);
+							this.displayDebug(`Current playback app - ${this.currentApp}`);
+							this.displayInfo(`Playback sensor status - ${this.adbAccessory.playback.status}`);
+							this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, state);
+						}, this.playbacksensordelay);
 					}
 
-					that.checkPlaybackProgress = false;	
+					this.adbAccessory.playback.onprogress = NO;	
 				}
-				var errorState = function(using) {
-					if(that.playing) {
-						that.displayDebug(`checkPlayback - error - using ${using}`);
+				var errorState = (using) => {
+					if(this.adbAccessory.playback.status == PLAY) {
+						this.displayDebug(`Playback error using ${using}`);
 
-						that.playing = false;
+						this.adbAccessory.playback.status = PAUSE;
 						changed = true;
 					}
 				}
-
-				this.checkPlaybackProgress = true;
-
+				
+				this.adbAccessory.playback.onprogress = YES;
+				
 				this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys media_session | grep -e 'Media button session is' -e 'AlexaMediaPlayerRuntime'"`, (err, stdout) => {
 					if(err) {
-						this.displayDebug(`checkPlayback - error - checking current media app`);
-					} else if(this.currentApp == HOME_APP_ID || this.currentApp != OTHER_APP_ID || stdout.includes(this.currentApp) || stdout.includes('AlexaMediaPlayerRuntime')) {
+						this.displayDebug(`Can't check for Playback status`);
+					} else if(this.adbAccessory.app.id == HOME_APP_ID || this.adbAccessory.app.id != OTHER_APP_ID || stdout.includes(this.adbAccessory.app.id) || stdout.includes('AlexaMediaPlayerRuntime')) {
 						this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys media_session | grep 'state=PlaybackState'"`, (err, stdout) => {
+
 							if(err) errorState('media_session');
 							else {
 								if(stdout != "") {
 									if(stdout.includes("state=3")) {
-										if(!this.playing) {
+										if(this.adbAccessory.playback.status == PAUSE) {
 											state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
-											this.playing = true;
+											this.adbAccessory.playback.status = PLAY;
 											changed = true;
 										}
-									} else if(this.playing) {
-										this.playing = false;
+									} else if(this.adbAccessory.playback.status == PLAY) {
+										this.adbAccessory.playback.status = PAUSE;
 										changed = true;
 									}
 								} else {
@@ -654,23 +662,23 @@ class ADBPlugin {
 
 							changeState(state, 'media_session - ' + stdout);
 						});
-					} else {
+					} else {					
 						this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys audio | grep 'player piid:' | grep ' state:' ${tail}"`, (err, stdout) => {
-							// After restart, android device will display error when running this command
+							// After restart, android accessory will display error when running this command
 							if(err) errorState('audio');
 							else {
 								if(stdout != "") {
-									stdout = stdout.trim().split("\n");
+									stdout = stdout.split("\n");
 									stdout = stdout[stdout.length - 1].trim();
 
 									if(stdout.includes("state:started")) {
-										if(!this.playing) {
+										if(this.adbAccessory.playback.status == PAUSE) {
 											state = Characteristic.OccupancyDetected.OCCUPANCY_DETECTED;
-											this.playing = true;
+											this.adbAccessory.playback.status = PLAY;
 											changed = true;
 										}
-									} else if(this.playing) {
-										this.playing = false;
+									} else if(this.adbAccessory.playback.status == PLAY) {
+										this.adbAccessory.playback.status = PAUSE;
 										changed = true;
 									}
 								} else {
@@ -691,14 +699,14 @@ class ADBPlugin {
 	 */
 	checkInput() {
 		var parseInput = (stdout) => {
-			if(!stdout || stdout == "") return false;
-			stdout = stdout.trim();
+			if(!stdout || stdout == "") return -1;
 
-			if(stdout != this.prevStdout) {
+			if(stdout != this.message.stdout.prev) {
 				let otherApp = true;
 
+				this.message.stdout.prev = stdout;
+
 				// Identified current focused app
-				this.prevStdout = stdout.trim();
 				if(stdout) {
 					stdout = stdout.trim().split("/");
 					stdout[0] = stdout[0].split(" ");
@@ -712,16 +720,16 @@ class ADBPlugin {
 				} else stdout = OTHER_APP_ID;
 
 				if(this.inputs.length > 0) {
-					if(this.inputs[this.currentInputIndex].id != stdout && (stdout === HOME_APP_ID || this.inputs[this.currentInputIndex].type !== 'command')) {
+					// Checking if it's a Home or registered app
+					if(stdout != this.inputs[this.adbAccessory.input.index].id && stdout != HOME_APP_ID) {
 						this.inputs.forEach((input, i) => {
-							// Home or registered app
 							if(stdout == input.id) {
-								this.currentInputIndex = i;
+								this.adbAccessory.input.index = i;
 								otherApp = false;
 							}
 						});
 
-						// Other app
+						// Other app, extract human readable name from app id
 						if(otherApp && !this.hideother) {
 							let name = stdout.split("."),
 								humanName = "",
@@ -740,179 +748,175 @@ class ADBPlugin {
 							humanName = humanName.trim();
 							if(humanName != "Other") humanName = `Other (${humanName.trim()})`;
 
-							this.currentInputIndex = this.inputs.length - 1;
-							if(this.inputs[this.currentInputIndex]) this.inputs[this.currentInputIndex].id = stdout;
-							if(this.inputs[this.currentInputIndex].service) {
-								if(!this.hidenumber) humanName = `${this.currentInputIndex + 1}. ${humanName}`;
-								this.inputs[this.currentInputIndex].service.setCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
+							this.adbAccessory.input.index = this.inputs.length - 1;
+							if(this.inputs[this.adbAccessory.input.index]) this.inputs[this.adbAccessory.input.index].id = stdout;
+							if(this.inputs[this.adbAccessory.input.index].service) {
+								if(!this.hidenumber) humanName = `${this.adbAccessory.input.index + 1}. ${humanName}`;
+								this.inputs[this.adbAccessory.input.index].service.updateCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
 							}
 						}
+					}
 
-						this.deviceService.updateCharacteristic(Characteristic.ActiveIdentifier, this.currentInputIndex);
+					if(this.adbAccessory.app.id != stdout) {
+						this.adbAccessory.app.id = stdout;
+						
+						// Set the accessory input to current selected app
+						this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, this.adbAccessory.input.index);
+						this.displayInfo(`Current app id - \x1b[4m${this.adbAccessory.app.id}\x1b[0m`);
 					}
 				}
-
-				if(this.currentApp != stdout) {
-					this.displayInfo(`Current app - \x1b[4m${stdout}\x1b[0m`);
-					this.currentApp = stdout;
-				}
-
 			}
 
-			return true;
+			return 1;
 		}
 
-		if(this.awake && !this.currentAppOnProgress) {
-			this.currentAppOnProgress = true;
+		if(this.adbAccessory.power.status == ON && this.adbAccessory.input.onprogress == NO && this.adbAccessory.input.onstatuschange == NO) {
+			this.adbAccessory.input.onprogress = YES;
 
-			if(this.checkInputUseWindows >= 0) {
+			// Check if ADB can use dumpsys window
+			if(this.adbAccessory.input.usewindows >= 0) {
 				this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys window windows | grep -E mFocusedApp"`, (err, stdout) => {
 					if(err) {
-						this.displayDebug(`checkInput - error while using dumpsys window`);
-						this.checkInputUseWindows = -1;
+						this.displayDebug(`Error while using "dumpsys window"`);
+						this.adbAccessory.input.usewindows = -1;
 					} else {
-						this.displayDebug(`checkInput - using dumpsys window`);
-						this.checkInputUseWindows = parseInput(stdout) ? 1 : -1;
+						this.displayDebug(`Using "dumpsys window"`);
+						this.adbAccessory.input.usewindows = parseInput(stdout);
 					}
 
-					this.currentAppOnProgress = false;
+					this.adbAccessory.input.onprogress = NO;
 				});
 			} 
 
-			if(this.checkInputUseWindows < 0 && this.checkInputUseActivities >= 0) {
+			// Check if ADB can use dumpsys activity
+			if(this.adbAccessory.input.usewindows < 0 && this.adbAccessory.input.useactivities >= 0) {
 				this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys activity activities | grep ' ResumedActivity'"`, (err, stdout) => {
 					if(err) {
-						this.displayDebug(`checkInput - error while using dumpsys activity`);
-						this.checkInputUseActivities = -1;
+						this.displayDebug(`Error while using "dumpsys activity"`);
+						this.adbAccessory.input.useactivities = -1;
 					} else {
-						this.displayDebug(`checkInput - using dumpsys activity`);
-						this.checkInputUseActivities = parseInput(stdout) ? 1 : -1;
+						this.displayDebug(`Using "dumpsys activity"`);
+						this.adbAccessory.input.useactivities = parseInput(stdout);
 					}
 
-					this.currentAppOnProgress = false;
+					this.adbAccessory.input.onprogress = NO;
 				});
 			}
 			
-			if(this.checkInputUseActivities < 0 && this.checkInputUseWindows < 0 && this.checkInputDisplayError) {
-				this.checkInputDisplayError = false;
-				that.displayInfo(`Can't read current app from device.`);
+			// If can't use both display error.
+			if(this.adbAccessory.input.useactivities < 0 && this.adbAccessory.input.usewindows < 0 && this.adbAccessory.input.error == YES) {
+				this.adbAccessory.input.error = YES;
+				that.displayInfo(`Can't read current app from accessory.`);
 			}
 		}
 	}
 
 	/**
-	 * Check if device is on based on screen status
+	 * Check if accessory is on based on screen status
 	 * @param {function} callback a function to run after finish executing ADB
 	 */
-	checkPower(callback) {
-		if(!this.unrecognized && !this.wol && !this.checkPowerOnProgress && !this.handleOnOffOnProgress) {
-			this.checkPowerOnProgress = true;
+	checkPower() {
+		if(!this.adbAccessory.wol.use && !this.adbAccessory.power.onprogress && !this.adbAccessory.power.onstatusprogress) {
+			this.adbAccessory.power.onprogress = true;
 
-			exec(`${this.path}adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, { timeout: this.timeout }, (err, stdout, stderr) => {
-				stdout = stdout.trim();
-				stderr = stderr.trim();
-
-				if(stdout == "") stdout = stderr;
-				if(stderr == "") stderr = stdout;
-
+			this.exec(`${this.path}adb -s ${this.ip} shell "dumpsys power | grep mHoldingDisplay"`, (err, stdout) => {
 				if(err) {
-					// When device can't be found, set it sleep
-					if(this.awake) {
-						this.awake = !this.awake;
-						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
+					// When adb command can't be execute, set it to off
+					if(this.adbAccessory.power.status == ON) {
+						this.adbAccessory.power.status = OFF;
+						this.displayInfo(`Accessory is OFF.`);
 					}
-
-					if(callback) callback('error');
 				} else {
-					let output = stdout.split('=')[1];
-
-					if((output == 'true' && !this.awake) || (output == 'false' && this.awake)) {
-						this.awake = !this.awake;
-						this.deviceService.getCharacteristic(Characteristic.Active).updateValue(this.awake);
-
-						this.displayDebug(`checkPower - ${this.awake}`);
+					// check power status from accessory
+					stdout = stdout.split('=')[1];
+					if((stdout == 'true' && this.adbAccessory.power.status == OFF) || (stdout == 'false' && this.adbAccessory.power.status == ON)) {
+						this.adbAccessory.power.status = !this.adbAccessory.power.status;
+						this.displayInfo(`Accessory is ${this.adbAccessory.power.status ? "ON." : "OFF."}`);
 					}
-
-					if(callback) callback(this.awake);
 				}
 
-				this.checkPowerOnProgress = false;
+				this.adbAccessory.power.onprogress = false;
+
+				// Set accessory power status
+				this.accessoryService.setCharacteristic(Characteristic.Active, this.adbAccessory.power.status);
 			});
 		}
 	}
 
 	/**
-	 * Connect to the device
-	 * @param {function} callback callback when connection is success
-	 * @param {function} callbackerror callback when there is error when executing ADB
+	 * Connect to the accessory
 	 */
-	connect(callback, callbackerror) {
-		this.displayDebug(`Reconnecting...`);
+	connect(timeout) {
+		if(this.adbAccessory.connecting == NO) {
+			this.displayDebug(`Reconnecting...`);
+			this.adbAccessory.connecting = true;
 
-		exec(`${this.path}adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout, stderr) => {
-			var message = "";
+			// Special, doesn't use costum exec
+			exec(`${this.path}adb connect ${this.ip}`, { timeout: this.timeout }, (err, stdout, stderr) => {
+				var message = "";
 
-			stdout = stdout.trim() || stderr.trim();
-			stderr = stderr.trim() || stdout;
+				stdout = stdout.trim() || stderr.trim();
+				if(stdout.includes(`device still authorizing`)) {
+					err = false;
+					message = `Accessory still authorizing. Please wait...`;
+				} else if(stdout.includes(`device unauthorized.`)) {
+					err = false;
+					message = `Unauthorized accessory. Please check your device for authorization.`;
+				} else if(stdout.includes(`Connection refused`)) {
+					err = true;
+					message = `Connection refused. Accessory disconnected or turned off. Reconnecting...`;
 
-			this.unrecognized = false;
-			if(stdout.includes(`device still authorizing`)) {
-				err = false;
-				message = `Device still authorizing. Please wait.`;
-			} else if(stdout.includes(`device unauthorized.`)) {
-				err = false;
-				message = `Unauthorized device. Please check your device screen for authorization popup.`;
-			} else if(stdout.includes(`Connection refused`)) {
-				err = true;
-				message = `Connection refused. Please check your configuration and restart this plugin.`;
-				this.unrecognized = true;
-			} else if(stdout.includes(`Operation timed out. Reconnecting...`)) {
-				err = false;
-				message= `Connection timeout. Reconnecting...`
-			} else if(err || stdout.includes(`failed to connect`)) {
-				message = `Device disconnected or turned off. Reconnecting...`;
-			} else if(!stdout.includes(`already connected`)){
-				this.displayDebug(stdout);
-			}
-			
-			if(message) {
-				this.displayInfo(`${message}`);
-
-				if(!this.unrecognized) {
-					// When ADB server get killed, "adb connect" will return the connection in approx 7 seconds
-					exec(`${this.path}adb connect ${this.ip}`, { timeout: 10000 }, (err) => {
-						if(!err) {
-							this.displayInfo(`Reconnected`);
-							if(callback) callback();
-						}
-					});
+					// When ADB server get killed, "adb connect" will return 
+					// the connection in approx. 7 seconds
+					this.timeout = 10000;
+				} else if(stdout.includes(`Operation timed out`)) {
+					err = false;
+					message= `Connection timeout. Reconnecting...`
+				} else if(err || stdout.includes(`failed to connect`)) {
+					message = `Accessory disconnected or turned off. Reconnecting...`;
+				} else if(!stdout.includes(`already connected`)){
+					this.displayDebug(stdout);
 				}
+				
+				if(message) {
+					this.displayInfo(`${message}`);
+						
+					// Accessory is offline
+					this.adbAccessory.status = OFFLINE;
 
-				if(callbackerror) callbackerror(err, message);
-			} else {
-				this.displayDebug(`Reconnected`);
-				if(callback) callback();
-			}
-		});
+				} else {
+					// Return to the base timeout
+					this.timeout = this.basetimeout;
+
+					// Set it online
+					this.adbAccessory.status = ONLINE;
+
+					this.displayDebug(`Reconnected`);
+				}
+				this.adbAccessory.connecting = false;
+			});
+		}
 	}
 
 	/**
-	 * The main loop to check device power, input, and playback status.
+	 * The main loop to check accessory power, input, and playback status.
 	 */
 	update() {
-		// Update device status every second -> or based on configuration
+		// Update accessory status every second -> or based on configuration
 		this.intervalHandler = setInterval(() => {
-			this.checkPower((awake) => {
-				if(awake == 'error') {
-					// Can't check the device power status, try reconnect
-					this.connect();
-				} else if(awake) {
-					// Check for current input when device is on
-					this.checkInput();
-					// Check playback status when device is on
-					if(this.playbacksensor) this.checkPlayback();
-				}
-			});
+			if(this.adbAccessory.status == OFFLINE) {
+				// Reconnecting
+				this.connect();
+			} else {
+				// Check power
+				this.checkPower();
+
+				// Check input
+				this.checkInput();
+
+				// Check playback
+				this.checkPlayback();
+			}
 		}, this.interval);
 	}
 
@@ -920,10 +924,9 @@ class ADBPlugin {
 	 * A helper for executing ADB command
 	 * @param {string} cmd the shell command
 	 * @param {function} callback callback when command succesully executed
-	 * @param {boolean} chatty output more debug
 	 */
-	exec(cmd, callback, chatty) {
-		this.execWithTimeout(cmd, this.timeout, callback, chatty);
+	exec(cmd, callback) {
+		this.execWithTimeout(cmd, this.timeout, callback);
 	}
 
 	/**
@@ -931,30 +934,23 @@ class ADBPlugin {
 	 * @param {string} cmd the shell command
 	 * @param {int} timeout timeout in miliseconds
 	 * @param {function} callback callback when command succesully executed
-	 * @param {boolean} chatty output more debug
 	 */
-	execWithTimeout(cmd, timeout, callback, chatty) {
-		if(chatty) this.displayDebug(`Running - ${cmd}`);
-		if(!this.unrecognized) {
-			exec(cmd, { timeout: timeout }, (err, stdout, stderr) => {
-				stdout = stdout.trim() || stderr.trim();
-				stderr = stderr.trim() || stdout;
+	execWithTimeout(cmd, timeout, callback) {
+		exec(cmd, { timeout: timeout }, (err, stdout, stderr) => {
+			stdout = stdout.trim() || stderr.trim();
 
-				if(err && (
-					stdout.includes(`error: device '${this.ip}' not found`) || 
-					stdout.includes(`error: closed`) || 
-					stdout.includes(`error: device offline`)
-				)) {
-					this.connect(() => {
-						this.exec(cmd, callback, chatty);
-					}, (err, message) => {
-						callback(err, message);
-					});
-				} else {
-					callback(stdout.includes(`Operation timed out`), stdout);
-				}
-			});
-		}
+			if(err ||
+			   stdout.includes(`error: device '${this.ip}' not found`) || 
+			   stdout.includes(`error: closed`) || 
+			   stdout.includes(`error: device offline`)
+			) {
+				this.adbAccessory.status = OFFLINE;
+				if(callback) callback(true, stdout);
+			} else {
+				this.adbAccessory.status = ONLINE;
+				if(callback) callback(stdout.includes(`Operation timed out`), stdout);
+			}
+		});
 	}
 
 	/**
@@ -962,9 +958,9 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayDebug(text){
-		if(this.debug && this.prevDebugMessage[0] != text && this.prevDebugMessage[1] != text) {
-			this.prevDebugMessage[1] = this.prevDebugMessage[0];
-			this.prevDebugMessage[0] = text;
+		if(this.debug && this.message.debug[0] != text && this.message.debug[1] != text) {
+			this.message.debug[1] = this.message.debug[0];
+			this.message.debug[0] = text;
 			this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
 		}
 	}
@@ -974,8 +970,8 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayInfo(text){
-		if(this.prevInfoMessage != text) {
-			this.prevInfoMessage = text;
+		if(this.message.info != text) {
+			this.message.info = text;
 			this.log.info(`${this.name} - ${text}`);
 		}
 	}

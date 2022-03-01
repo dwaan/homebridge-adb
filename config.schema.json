@@ -44,7 +44,6 @@
 							"type": "number",
 							"title": "ADB Timeout",
 							"placeholder": "Timeout for ADB commnad",
-							"default": "",
 					        "oneOf": [
 								{ "title": "1000", "enum": ["1000"] },
 								{ "title": "2000", "enum": ["2000"] },
@@ -57,7 +56,6 @@
 							"type": "number",
 							"title": "Polling interval",
 							"placeholder": "Check your device every n miliseconds",
-							"default": "",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -71,7 +69,6 @@
 							"type": "string",
 							"title": "Category",
 							"placeholder": "Pick a category that suitable for your",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
 								{ "title": "Television", "enum": ["TELEVISION"] },
@@ -112,7 +109,6 @@
 							"type": "boolean",
 							"title": "Hide number inputs in Home App",
 							"placeholder": "Hide number from inputs list in Home App",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -122,7 +118,6 @@
 							"type": "boolean",
 							"title": "Hide 'Home' input in Home App",
 							"placeholder": "Hide 'Home' input in Home App",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -132,7 +127,6 @@
 							"type": "boolean",
 							"title": "Hide 'Other' input in Home App",
 							"placeholder": "Hide 'Other' input in Home App",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -142,7 +136,6 @@
 							"type": "boolean",
 							"title": "Playback as Motion Sensor",
 							"placeholder": "Playback as Motion Sensor",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -152,7 +145,6 @@
 							"type": "number",
 							"title": "Sensor delay (ms)",
 							"placeholder": "Playback as Motion Sensor delay",
-							"default": "",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -165,14 +157,12 @@
 						"playbacksensorexclude": {
 							"type": "string",
 							"title": "Exclude this app from Playback Sensor",
-							"placeholder": "Exclude this app from Playback Sensor",
-							"default": ""
+							"placeholder": "Exclude this app from Playback Sensor"
 						},
 						"debug": {
 							"type": "boolean",
 							"title": "Display more debug message",
 							"placeholder": "Display more debug message",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -182,7 +172,6 @@
 							"type": "boolean",
 							"title": "Skip speaker/volume creation",
 							"placeholder": "Skip speaker/volume creation",
-							"default": "",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -192,46 +181,39 @@
 							"type": "string",
 							"title": "Back Button",
 							"placeholder": "eg: KEYCODE_BACK",
-							"minLength": 9,
-							"default": ""
+							"minLength": 9
 						},
 						"playpausebutton": {
 							"type": "string",
 							"title": "Play/Pause Button",
 							"placeholder": "eg: KEYCODE_MEDIA_PLAY_PAUSE",
-							"minLength": 9,
-							"default": ""
+							"minLength": 9
 						},
 						"infobutton": {
 							"type": "string",
 							"title": "Info Button",
 							"placeholder": "eg: KEYCODE_HOME",
-							"minLength": 9,
-							"default": ""
+							"minLength": 9
 						},
 						"poweron": {
 							"type": "string",
 							"title": "Power On Keycode",
-							"placeholder": "eg: KEYCODE_POWER",
-							"default": ""
+							"placeholder": "eg: KEYCODE_POWER"
 						},
 						"poweroff": {
 							"type": "string",
 							"title": "Power Off Keycode",
-							"placeholder": "eg: KEYCODE_POWER",
-							"default": ""
+							"placeholder": "eg: KEYCODE_POWER"
 						},
 						"poweronexec": {
 							"type": "string",
 							"title": "Power On Script",
-							"placeholder": "eg: poweron -t now",
-							"default": ""
+							"placeholder": "eg: poweron -t now"
 						},
 						"poweroffexec": {
 							"type": "string",
 							"title": "Power Off Script",
-							"placeholder": "eg: poweroff -t now",
-							"default": ""
+							"placeholder": "eg: poweroff -t now"
 						}
 					}
 				}
