@@ -99,12 +99,11 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "name": "NVIDIA Shield",
                     "interval": 1000,
                     "ip": "192.168.1.136",
-                    "mac": "97:b6:e8:46:9f:cb",
 					"timeout": 1000,
                     "playbacksensor": true,
                     "playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
-                    "backbutton": "KEYCODE_BACK",
-                    "infobutton": "KEYCODE_HOME",
+                    "backbutton": "shell: sh ./myscript.sh",
+                    "infobutton": "KEYCODE_HOME KEYCODE_HOME",
                     "category": "TV_STREAMING_STICK",
                     "hidenumber": true,
                     "hidehome": true,
@@ -113,20 +112,21 @@ Here an example of configuration that you can use. If you're using Homebridge Co
                     "skipSpeaker": false,
                     "inputs": [
                         {
-                            "name": "HBO Now",
+                            "name": "HBO Max",
                             "id": "com.hbo.hbonow"
                         },
                         {
                             "name": "Apple Music",
                             "id": "com.apple.android.music"
-                        }
+                        },
                     ]
                 },
                 {
                     "name": "Meizu",
                     "ip": "192.168.1.121",
                     "playbacksensor": false,
-                    "poweron": "KEYCODE_POWER",
+                    "mac": "97:b6:e8:46:9f:cb",
+                    "poweroff": "KEYCODE_SLEEP",
                     "inputs": [
                         {
                             "name": "Termux",
@@ -156,14 +156,12 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 	* *adb* (optional): you can run your own ADB shell command here, such as: `monkey -p com.app.id 1`. This is an ADB shell command, so you doesn't need to type "adb -s ipaddress shell ...".
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.
-* *infobutton*, *playpauseobutton*, *backbutton* (optional): assign custom key event code for Remote control in iOS Control Center, see [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the key codes.
+* *volumeup*, *volumedown*, *infobutton*, *playpauseobutton*, *backbutton*, *poweron*, *poweroff* (optional): assign custom ADB keycode for Remote control action in iOS Control Center. You can put one or more keycodes by seperating them with space, eg: `volumeup: "KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN"`. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the keycode list. You can also put a shell script instead of keycode to run your own command. Put `shell` identifier to let the plugins know it's a shell script, eq: `volumeup: "shell sh ./myscript.sh"`
 * *hidenumber* (optional): if set to *true*, plugin will hide number inputs in Home App.
 * *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
 * *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 * *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
 * *skipSpeaker* (optional): if set to *true*, an accompanying speaker will not be initialized for the device and will disable volume control in Control Center Remote.
-* *poweron*, *poweroff* (optional): assign csutom key event code for Power on/off, you can use KEYCODE_POWER or combination of KEYCODE_AWAKE/KEYCODE_SLEEP. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the other key codes that might more suitable for your device.
-
 
 ### **GOOD TO KNOW**: ADB commands that this plugin use
 

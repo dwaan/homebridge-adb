@@ -69,12 +69,6 @@ class ADBPlugin {
 		this.playbacksensorexclude =  this.config.playbacksensorexclude || "";
 		this.playbacksensordelay = this.config.playbacksensordelay || 0;
 		this.playbacksensortimeout = false;
-		// Power ON/OFF
-		this.poweron = this.config.poweron || "KEYCODE_POWER";
-		this.poweroff = this.config.poweroff || this.poweron;
-		// Power ON/OFF Executable
-		this.poweronexec = this.config.poweronexec;
-		this.poweroffexec = this.config.poweroffexec;
 		// Category
 		this.category = this.config.category || "TELEVISION";
 		this.category = this.category.toUpperCase();
@@ -82,6 +76,7 @@ class ADBPlugin {
 		// Accessory status
 		this.adbAccessory = {
 			connecting: false,
+			initialized: false,
 			status: ONLINE,
 			power: {
 				status: ON,
@@ -165,45 +160,63 @@ class ADBPlugin {
 
 		this.displayInfo(`Initializing`);
 
-		// Get the accessory information and send it to HomeBridge
-		this.exec(`${this.path}adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
-			// Get accessory information
-			if(err) stdout = ["", "", ""];
-			else stdout = stdout.split("\n");
-
+		// Get the accessory information 
+		this.getAccessoryInformations((stdout) => {
 			// Handle On Off
 			this.handleOnOff();
 
-			if(this.inputs.length > 0) {
-				// Create inputs
-				this.createInputs();
+			// Handle inputs
+			this.handleInputs();
 
-				// Handle inputs
-				this.handleInputs();
-			}
+			// Handle volume
+			this.handleVolume();
 
 			// Show Control Center Remote if needed
 			this.handleRemoteControl();
 
-			// Create speaker services
-			this.createTelevisionSpeakers();
-
-			// Publish tv accessories
-			this.createTelevision(stdout);
-
-			// Playback sensor
-			this.createPlaybackSensor(stdout);
-
-			// Accessory finish initialzing
-			this.displayInfo(`Accessory initialized.`);
-
 			// Loop the power status
 			this.update();
-
-			// Display error when can't connect to accessory
-			if(err) this.log.error(`\n\nWARNING:\nUnrecognized accessory - "${this.name}".\nPlease check if the accessory IP address is correct.\nIf your accessory is turned OFF, please turn it ON.\n`);
 		});
 	}
+
+
+
+	/**
+	 * Get accessory information to be used in Home app as identifier
+	 */
+	getAccessoryInformations(callback) {
+		if(!this.initAccessory) {
+			this.exec(`${this.path}adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
+				// Get accessory information
+				if(err) stdout = ["", "", ""];
+				else stdout = stdout.split("\n");
+
+				// Create inputs
+				this.createInputs();
+
+				// Create speaker services
+				this.createTelevisionSpeakers();
+
+				// Publish tv accessories
+				this.createTelevision(stdout);
+
+				// Playback sensor
+				this.createPlaybackSensor(stdout);
+
+				if(callback) callback(stdout);
+
+				// Display error when can't connect to accessory
+				if(err) this.log.error(`\n\nWARNING:\nUnrecognized accessory - "${this.name}".\nPlease check if the accessory's IP address is correct.\nIf your accessory is turned OFF, please turn it ON.\n`);
+				// Accessory finish initialzing
+				else {
+					this.initAccessory = true;
+					this.displayInfo(`Accessory initialized.`);
+				}
+			});
+		}
+	}
+
+
 
 	/**
 	 * Create television accesory based on ADB information
@@ -230,47 +243,49 @@ class ADBPlugin {
 	 * input accessories
 	 */
 	createInputs() {
-		for (let i = 0; i < 50; i++) {
-			let
-				input = this.inputs[i],
-				type = Characteristic.InputSourceType.APPLICATION,
-				configured = Characteristic.IsConfigured.CONFIGURED,
-				targetVisibility = Characteristic.TargetVisibilityState.SHOWN,
-				currentVisibility = Characteristic.CurrentVisibilityState.SHOWN,
-				name = "";
+		if(this.inputs.length > 0) {
+			for (let i = 0; i < 50; i++) {
+				let
+					input = this.inputs[i],
+					type = Characteristic.InputSourceType.APPLICATION,
+					configured = Characteristic.IsConfigured.CONFIGURED,
+					targetVisibility = Characteristic.TargetVisibilityState.SHOWN,
+					currentVisibility = Characteristic.CurrentVisibilityState.SHOWN,
+					name = "";
 
-			if(i == 0 && !this.hidehome) type = Characteristic.InputSourceType.HOME_SCREEN;
-			else if(i == this.inputs.length - 1 && !this.hideother) type = Characteristic.InputSourceType.OTHER;
+				if(i == 0 && !this.hidehome) type = Characteristic.InputSourceType.HOME_SCREEN;
+				else if(i == this.inputs.length - 1 && !this.hideother) type = Characteristic.InputSourceType.OTHER;
 
-			let humanNumber = i + 1;
-			if(humanNumber < 10) humanNumber = "0" + (i + 1);
+				let humanNumber = i + 1;
+				if(humanNumber < 10) humanNumber = "0" + (i + 1);
 
-			if(i >= this.inputs.length || !input.name || !input.id) {
-				// Create hidden input when name and id is empty and for future modification
-				configured = Characteristic.IsConfigured.NOT_CONFIGURED;
-				targetVisibility = Characteristic.TargetVisibilityState.HIDDEN;
-				currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
-				name = `${humanNumber}. Hidden Input`;
-			} else {
-				name = `${input.name}`;
-				if(!this.hidenumber) name = `${humanNumber}. ${name}`;
-			}
+				if(i >= this.inputs.length || !input.name || !input.id) {
+					// Create hidden input when name and id is empty and for future modification
+					configured = Characteristic.IsConfigured.NOT_CONFIGURED;
+					targetVisibility = Characteristic.TargetVisibilityState.HIDDEN;
+					currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
+					name = `${humanNumber}. Hidden Input`;
+				} else {
+					name = `${input.name}`;
+					if(!this.hidenumber) name = `${humanNumber}. ${name}`;
+				}
 
-			if(targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`Input: ${name}`);
-			let service = this.accessory.addService(Service.InputSource, `Input - ${name}`, i);
-			service
-				.setCharacteristic(Characteristic.Identifier, i)
-				.setCharacteristic(Characteristic.ConfiguredName, name)
-				.setCharacteristic(Characteristic.InputSourceType, type)
-				.setCharacteristic(Characteristic.TargetVisibilityState, targetVisibility)
-				.setCharacteristic(Characteristic.CurrentVisibilityState, currentVisibility)
-				.setCharacteristic(Characteristic.IsConfigured, configured);
-			this.accessoryService.addLinkedService(service);
+				if(targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`Input: ${name}`);
+				let service = this.accessory.addService(Service.InputSource, `Input - ${name}`, i);
+				service
+					.setCharacteristic(Characteristic.Identifier, i)
+					.setCharacteristic(Characteristic.ConfiguredName, name)
+					.setCharacteristic(Characteristic.InputSourceType, type)
+					.setCharacteristic(Characteristic.TargetVisibilityState, targetVisibility)
+					.setCharacteristic(Characteristic.CurrentVisibilityState, currentVisibility)
+					.setCharacteristic(Characteristic.IsConfigured, configured);
+				this.accessoryService.addLinkedService(service);
 
-			if(configured == Characteristic.IsConfigured.CONFIGURED) {
-				this.inputs[i].service = service;
-			}
-		};
+				if(configured == Characteristic.IsConfigured.CONFIGURED) {
+					this.inputs[i].service = service;
+				}
+			};
+		}
 	}
 
 	/**
@@ -283,28 +298,6 @@ class ADBPlugin {
 			this.accessoryTelevisionSpeakerService
 				.setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
 				.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.RELATIVE); // RELATIVE or ABSOLUTE
-
-			// Volume control
-			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
-				.on('set', (state, callback) => {
-					let key = state ? "KEYCODE_VOLUME_DOWN" : "KEYCODE_VOLUME_UP";
-
-					this.exec(`${this.path}adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
-						if(err) this.displayDebug(`Can't set volume`);
-						else this.displayDebug(`Sending volume key`);
-					});
-
-					callback(null);
-				});
-
-			// Mute control - not implemented yet
-			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.Mute)
-				.on('get', (callback) => {
-					callback(null, 0);
-				})
-				.on('set', (state, callback) => {
-					callback(null);
-				});
 
 			this.accessoryService.addLinkedService(this.accessoryTelevisionSpeakerService);
 
@@ -333,6 +326,8 @@ class ADBPlugin {
 			this.displayDebug(`Sensor created`);
 		}
 	}
+
+
 
 	/**
 	 * Handle On/Off
@@ -372,28 +367,14 @@ class ADBPlugin {
 								this.adbAccessory.power.onstatusprogress = false;
 								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 							});
-						} else if(this.poweronexec) {
-							this.exec(`${this.poweronexec}`, (err, stdout) => {
-								this.displayDebug("Executing Power On");
-								if(err) {
-									this.displayInfo("Executable - Power Off - Failed");
-									this.displayDebug("Error: " + stdout);
-									state = !state;
-								} else {
-									this.displayDebug("Executable - Power On");
-								}
-
-								this.adbAccessory.power.onstatusprogress = false;
-								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
-							});
 						} else {
-							this.execWithTimeout(`${this.path}adb -s ${this.ip} shell "input keyevent ${this.poweron}"`, 15000, (err, stdout) => {
+							this.execOrKeycodeWithTimeout(this.config.poweron || "KEYCODE_POWER", 15000, (err, stdout) => {
 								if(err) {
-									this.displayInfo("ADB - Power On - Failed");
+									this.displayInfo("Power On - Failed");
 									this.displayDebug("Error: " + stdout);
 									state = !state;
 								} else {
-									this.displayDebug("ADB - Power On");
+									this.displayDebug("Power On");
 								}
 
 								this.adbAccessory.power.onstatusprogress = false;
@@ -405,34 +386,18 @@ class ADBPlugin {
 						this.accessoryService.updateCharacteristic(Characteristic.Active, state);
 						this.displayDebug("Trying to turn off accessory");
 
-						if(this.poweroffexec) {
-							this.exec(`${this.poweroffexec}`, (err, stdout) => {
-								this.displayDebug("Executing Power Off");
-								if(err) {
-									this.displayInfo("Executable - Power Off - Failed");
-									this.displayDebug("Error: " + stdout);
-									state = !state;									
-								} else {
-									this.displayDebug("Executable - Power Off");
-								}
+						this.execOrKeycode(this.config.poweroff || "KEYCODE_POWER", (err, stdout) => {
+							if(err) {
+								this.displayInfo("Power Off - Failed");
+								this.displayDebug("Error: " + stdout);
+								state = !state;									
+							} else {
+								this.displayDebug("Power Off");
+							}
 
-								this.adbAccessory.power.onstatusprogress = false;
-								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
-							});
-						} else {
-							this.exec(`${this.path}adb -s ${this.ip} shell "input keyevent ${this.poweroff}"`,(err, stdout) => {
-								if(err) {
-									this.displayInfo("ADB - Power Off - Failed");
-									this.displayDebug("Error: " + stdout);
-									state = !state;
-								} else {
-									this.displayDebug("ADB - Power Off");
-								}
-
-								this.adbAccessory.power.onstatusprogress = false;
-								this.accessoryService.updateCharacteristic(Characteristic.Active, state);
-							});
-						}
+							this.adbAccessory.power.onstatusprogress = false;
+							this.accessoryService.updateCharacteristic(Characteristic.Active, state);
+						});
 					}
 				} 
 
@@ -446,50 +411,81 @@ class ADBPlugin {
 	}
 
 	/**
+	 * Handle volume control
+	 */
+	handleVolume() {
+		if(!this.skipSpeaker) {
+			// Volume control
+			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
+				.on('set', (state, callback) => {
+					let key = state ? this.config.wolumedown || "KEYCODE_VOLUME_DOWN" : this.config.wolumeup || "KEYCODE_VOLUME_UP";
+
+					this.execOrKeycode(key, (err) => {
+						if(err) this.displayDebug(`Can't set volume`);
+						else this.displayDebug(`Sending volume key`);
+					});
+
+					callback(null);
+				});
+
+			// Mute control - not implemented yet
+			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.Mute)
+				.on('get', (callback) => {
+					callback(null, 0);
+				})
+				.on('set', (state, callback) => {
+					callback(null);
+				});
+		}
+	}
+
+	/**
 	 * Handle input change
 	 */
 	handleInputs() {
-		this.accessoryService.getCharacteristic(Characteristic.ActiveIdentifier)
-			.on('set', (state, callback) => {
-				if(this.adbAccessory.input.onstatuschange == NO) {
-					let adb = `${this.path}adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
+		if(this.inputs.length > 0) {
+			this.accessoryService.getCharacteristic(Characteristic.ActiveIdentifier)
+				.on('set', (state, callback) => {
+					if(this.adbAccessory.input.onstatuschange == NO) {
+						let adb = `${this.path}adb -s ${this.ip} shell "input keyevent KEYCODE_HOME"`;
 
-					this.adbAccessory.input.onstatuschange = YES;
-					this.adbAccessory.input.index = state;
+						this.adbAccessory.input.onstatuschange = YES;
+						this.adbAccessory.input.index = state;
 
-					// Accessory what kind of command that the input is
-					if(this.adbAccessory.input.index != 0 && this.inputs[this.adbAccessory.input.index].id != OTHER_APP_ID) {
-						let type = this.inputs[this.adbAccessory.input.index].id.trim();
+						// Accessory what kind of command that the input is
+						if(this.adbAccessory.input.index != 0 && this.inputs[this.adbAccessory.input.index].id != OTHER_APP_ID) {
+							let type = this.inputs[this.adbAccessory.input.index].id.trim();
 
-						if(this.inputs[this.adbAccessory.input.index].adb) {
-							// Run specific custom ADB command
-							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].adb}"`;
-							this.displayDebug(`Running - ADB command - ${this.inputs[this.adbAccessory.input.index].adb}`);
-						} else if(!type.includes(" ") && type.includes(".")) {
-							// Run app based on given valid id
-							adb = `${this.path}adb -s ${this.ip} shell "monkey -p ${this.inputs[this.adbAccessory.input.index].id} 1"`;
-							this.displayDebug(`Running - App - ${this.inputs[this.adbAccessory.input.index].id}`);
-						} else {
-							// Run ID as it's an ADB command
-							adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].id}"`;
-							this.displayDebug(`Running - ${this.inputs[this.adbAccessory.input.index].id}`);
+							if(this.inputs[this.adbAccessory.input.index].adb) {
+								// Run specific custom ADB command
+								adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].adb}"`;
+								this.displayDebug(`Running - ADB command - ${this.inputs[this.adbAccessory.input.index].adb}`);
+							} else if(!type.includes(" ") && type.includes(".")) {
+								// Run app based on given valid id
+								adb = `${this.path}adb -s ${this.ip} shell "monkey -p ${this.inputs[this.adbAccessory.input.index].id} 1"`;
+								this.displayDebug(`Running - App - ${this.inputs[this.adbAccessory.input.index].id}`);
+							} else {
+								// Run ID as it's an ADB command
+								adb = `${this.path}adb -s ${this.ip} shell "${this.inputs[this.adbAccessory.input.index].id}"`;
+								this.displayDebug(`Running - ${this.inputs[this.adbAccessory.input.index].id}`);
+							}
 						}
+
+						this.exec(adb, (err) => {
+							if(err) this.displayInfo(`Can't open ${this.inputs[this.adbAccessory.input.index].name}`);
+							else {
+								this.adbAccessory.app.id = this.inputs[this.adbAccessory.input.index].id;
+								this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, this.adbAccessory.input.index);
+								this.displayInfo(`Current app: ${this.inputs[this.adbAccessory.input.index].name}`);
+							}
+
+							this.adbAccessory.input.onstatuschange = NO;
+						});
 					}
 
-					this.exec(adb, (err) => {
-						if(err) this.displayInfo(`Can't open ${this.inputs[this.adbAccessory.input.index].name}`);
-						else {
-							this.adbAccessory.app.id = this.inputs[this.adbAccessory.input.index].id;
-							this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, this.adbAccessory.input.index);
-							this.displayInfo(`Current app: ${this.inputs[this.adbAccessory.input.index].name}`);
-						}
-
-						this.adbAccessory.input.onstatuschange = NO;
-					});
-				}
-
-				callback(null);
-			});
+					callback(null);
+				});
+		}
 	}
 
 	/**
@@ -555,8 +551,7 @@ class ADBPlugin {
 						break;
 					}
 					case Characteristic.RemoteKey.BACK: {
-						if(this.config.backbutton) key = this.config.backbutton;
-						else key = 'KEYCODE_BACK';
+						key = this.config.backbutton || 'KEYCODE_BACK';
 						break;
 					}
 					case Characteristic.RemoteKey.EXIT: {
@@ -564,24 +559,24 @@ class ADBPlugin {
 						break;
 					}
 					case Characteristic.RemoteKey.PLAY_PAUSE: {
-						if(this.config.playpausebutton) key = this.config.playpausebutton;
-						else key = 'KEYCODE_MEDIA_PLAY_PAUSE';
+						key = this.config.playpausebutton || 'KEYCODE_MEDIA_PLAY_PAUSE';
 						break;
 					}
 					case Characteristic.RemoteKey.INFORMATION: {
-						if(this.config.infobutton) key = this.config.infobutton;
-						else key = 'KEYCODE_INFO';
+						key = this.config.infobutton || 'KEYCODE_INFO';
 						break;
 					}
 				}
 
-				this.exec(`${this.path}adb -s ${this.ip} shell "input keyevent ${key}"`, (err) => {
-					if(err) this.displayDebug(`handleRemoteControl - Can't send: ${key}`);
-					else this.displayDebug(`handleRemoteControl - Sending: ${key}`);
+				this.execOrKeycode(key, (err) => {
+					if(err) this.displayDebug(`Remote Control - Can't send: ${key}`);
+					else this.displayDebug(`Remote Control - Sending: ${key}`);
 				});
 				callback(null);
 			});
 	}
+
+
 
 	/**
 	 * Check whether to use tail or head for more optimized output
@@ -843,6 +838,8 @@ class ADBPlugin {
 		}
 	}
 
+
+
 	/**
 	 * Connect to the accessory
 	 */
@@ -891,6 +888,9 @@ class ADBPlugin {
 					// Set it online
 					this.adbAccessory.status = ONLINE;
 
+					// Get and set accessory information
+					this.getAccessoryInformations();
+
 					this.displayDebug(`Reconnected`);
 				}
 				this.adbAccessory.connecting = false;
@@ -918,6 +918,46 @@ class ADBPlugin {
 				this.checkPlayback();
 			}
 		}, this.interval);
+	}
+
+
+
+	/**
+	 * A helper for executing ADB keycode command or custom shell executable
+	 * @param {string} command the shell command
+	 * @param {function} callback callback when command succesully executed
+	 */
+	execOrKeycode(command, callback) {
+		this.execOrKeycodeWithTimeout(command, this.timeout, callback);
+	}
+
+	/**
+	 * A helper for executing ADB keycode command or custom shell executable with custom timeout
+	 * @param {string} command the shell command
+	 * @param {int} timeout timeout in miliseconds
+	 * @param {function} callback callback when command succesully executed
+	 */
+	execOrKeycodeWithTimeout(command, timeout, callback) {
+		let finalCommand = "";
+		command = command.split(" ");
+
+		if(command[0].toLowerCase() == "shell") {
+			// Command is a shell script
+			this.displayDebug("Sending shell script");
+			for(let i = 1; i < command.length; i++) {
+				finalCommand += `${command[i]} `;
+			}
+		} else {
+			// Command is keycode
+			this.displayDebug("Sending adb keycode command");
+			for(let i = 0; i < command.length; i++) {
+				finalCommand += `input keyevent ${command[i]}`;
+				if (i < command.length - 1) finalCommand += ` && `;
+			}
+			finalCommand = `${this.path}adb -s ${this.ip} shell "${finalCommand}"`
+		}
+
+		this.execWithTimeout(finalCommand, timeout, callback);
 	}
 
 	/**
@@ -952,6 +992,8 @@ class ADBPlugin {
 			}
 		});
 	}
+
+
 
 	/**
 	 * A helper to output log, only appeared after with debug config set to true

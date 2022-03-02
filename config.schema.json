@@ -179,41 +179,41 @@
 						},
 						"backbutton": {
 							"type": "string",
-							"title": "Back Button",
+							"title": "Back",
 							"placeholder": "eg: KEYCODE_BACK",
 							"minLength": 9
 						},
 						"playpausebutton": {
 							"type": "string",
-							"title": "Play/Pause Button",
+							"title": "Play/Pause",
 							"placeholder": "eg: KEYCODE_MEDIA_PLAY_PAUSE",
 							"minLength": 9
 						},
 						"infobutton": {
 							"type": "string",
-							"title": "Info Button",
+							"title": "Info",
 							"placeholder": "eg: KEYCODE_HOME",
 							"minLength": 9
 						},
 						"poweron": {
 							"type": "string",
-							"title": "Power On Keycode",
+							"title": "Power On",
 							"placeholder": "eg: KEYCODE_POWER"
 						},
 						"poweroff": {
 							"type": "string",
-							"title": "Power Off Keycode",
+							"title": "Power Off",
 							"placeholder": "eg: KEYCODE_POWER"
 						},
-						"poweronexec": {
+						"volumeup": {
 							"type": "string",
-							"title": "Power On Script",
-							"placeholder": "eg: poweron -t now"
+							"title": "Volume Up",
+							"placeholder": "eg: KEYCODE_VOLUME_UP"
 						},
-						"poweroffexec": {
+						"volumedown": {
 							"type": "string",
-							"title": "Power Off Script",
-							"placeholder": "eg: poweroff -t now"
+							"title": "Volume Down",
+							"placeholder": "eg: KEYCODE_VOLUME_DOWN"
 						}
 					}
 				}
@@ -360,11 +360,26 @@
 							]
 						},
 						{
-							"title": "Control Center Remote KeyCode",
+							"title": "Control Center Remote and Power ON/OFF",
 							"expandable": true,
 							"expanded": false,
-							"description": "Use costum keycode for control center remote.",
+							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can also put a shell script instead of keycode to run your own command. Put \"shell\" identifier to let the plugins know it's a shell script, eq: \"shell sh ./myscript.sh\"",
 							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "row",
+									"items": [
+										{
+											"key": "accessories[].volumeup",
+											"flex": "1 1 100px"
+										},
+										{
+											"key": "accessories[].volumedown",
+											"flex": "1 1 100px"
+										}
+									]
+								},
 								{
 									"type": "flex",
 									"displayFlex": true,
@@ -390,15 +405,7 @@
 											"flex": "1 1 100px"
 										}
 									]
-								}
-							]
-						},
-						{
-							"title": "Power KeyCode / Executable",
-							"expandable": true,
-							"expanded": false,
-							"description": "Use costum keycode to power on/off your device, or run your own shell script to turn on/off your device.",
-							"items": [
+								},
 								{
 									"type": "flex",
 									"displayFlex": true,
@@ -410,22 +417,6 @@
 										},
 										{
 											"key": "accessories[].poweroff",
-											"flex": "1 1 100px"
-										}
-
-									]
-								},
-								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
-									"items": [
-										{
-											"key": "accessories[].poweronexec",
-											"flex": "1 1 100px"
-										},
-										{
-											"key": "accessories[].poweroffexec",
 											"flex": "1 1 100px"
 										}
 
