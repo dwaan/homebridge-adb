@@ -17,45 +17,47 @@
 						"name": {
 							"type": "string",
 							"title": "Device Name",
-							"placeholder": "Type your device name",
+							"placeholder": "Eg: Your Device Name",
 							"minLength": 1,
 							"required": true
 						},
 						"ip": {
 							"type": "string",
 							"title": "IP Address",
-							"placeholder": "Type your device IP address",
+							"placeholder": "Eg: 192.168.1.1",
 							"format": "ipv4",
 							"required": true
 						},
 						"path": {
 							"type": "string",
 							"title": "ADB Path",
-							"placeholder": "Type the complete of your ADB, eg: /usr/bin/ or c:\\adb-tools\\"
+							"placeholder": "Eg: /usr/bin/ or c:\\adb-tools\\"
 						},
 						"mac": {
 							"type": "string",
 							"title": "MAC address",
-							"placeholder": "Type your device MAC address",
+							"placeholder": "Eg: 4d:23:ca:5e:78:3e",
 							"format": "mac",
 							"required": false
 						},
 						"timeout": {
 							"type": "number",
 							"title": "ADB Timeout",
-							"placeholder": "Timeout for ADB commnad",
 					        "oneOf": [
 								{ "title": "1000", "enum": ["1000"] },
+								{ "title": "1500", "enum": ["1500"] },
 								{ "title": "2000", "enum": ["2000"] },
+								{ "title": "2500", "enum": ["2500"] },
 								{ "title": "3000", "enum": ["3000"] },
+								{ "title": "3500", "enum": ["3500"] },
 								{ "title": "4000", "enum": ["4000"] },
+								{ "title": "4500", "enum": ["4500"] },
 								{ "title": "5000", "enum": ["5000"] }
 					        ]
 						},
 						"interval": {
 							"type": "number",
 							"title": "Polling interval",
-							"placeholder": "Check your device every n miliseconds",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -68,7 +70,6 @@
 						"category": {
 							"type": "string",
 							"title": "Category",
-							"placeholder": "Pick a category that suitable for your",
 					        "oneOf": [
 								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
 								{ "title": "Television", "enum": ["TELEVISION"] },
@@ -87,19 +88,19 @@
 									"name": {
 										"title": "Name",
 										"type": "string",
-										"placeholder": "Your apps name",
+										"placeholder": "eg: App name",
 										"required": true
 									},
 									"id": {
 										"title": "App ID",
 										"type": "string",
-										"placeholder": "App ID (com.your.app.id)",
+										"placeholder": "eg: com.your.app.id",
 										"required": true
 									},
 									"adb": {
 										"title": "or, Command",
 										"type": "string",
-										"placeholder": "eq: monkey -p home 1",
+										"placeholder": "eg: monkey -p home 1",
 										"required": false
 									}
 								}
@@ -107,8 +108,7 @@
 						},
 						"hidenumber": {
 							"type": "boolean",
-							"title": "Hide number inputs in Home App",
-							"placeholder": "Hide number from inputs list in Home App",
+							"title": "Hide Inputs' number in Home App",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -116,8 +116,7 @@
 						},
 						"hidehome": {
 							"type": "boolean",
-							"title": "Hide 'Home' input in Home App",
-							"placeholder": "Hide 'Home' input in Home App",
+							"title": "Hide 'Home' Input in Home App",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -125,8 +124,7 @@
 						},
 						"hideother": {
 							"type": "boolean",
-							"title": "Hide 'Other' input in Home App",
-							"placeholder": "Hide 'Other' input in Home App",
+							"title": "Hide 'Other' Input in Home App",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -135,7 +133,6 @@
 						"playbacksensor": {
 							"type": "boolean",
 							"title": "Playback as Motion Sensor",
-							"placeholder": "Playback as Motion Sensor",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -144,7 +141,6 @@
 						"playbacksensordelay": {
 							"type": "number",
 							"title": "Sensor delay (ms)",
-							"placeholder": "Playback as Motion Sensor delay",
 					        "oneOf": [
 								{ "title": "500", "enum": ["500"] },
 								{ "title": "1000", "enum": ["1000"] },
@@ -157,12 +153,11 @@
 						"playbacksensorexclude": {
 							"type": "string",
 							"title": "Exclude this app from Playback Sensor",
-							"placeholder": "Exclude this app from Playback Sensor"
+							"placeholder": "Eg: com.your.app.id"
 						},
 						"debug": {
 							"type": "boolean",
 							"title": "Display more debug message",
-							"placeholder": "Display more debug message",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
@@ -171,11 +166,40 @@
 						"skipSpeaker": {
 							"type": "boolean",
 							"title": "Skip speaker/volume creation",
-							"placeholder": "Skip speaker/volume creation",
 					        "oneOf": [
 								{ "title": "Yes", "enum": ["true"] },
 								{ "title": "No", "enum": ["false"] }
 					        ]
+						},
+						"upbutton": {
+							"type": "string",
+							"title": "Up",
+							"placeholder": "eg: KEYCODE_DPAD_UP",
+							"minLength": 9
+						},
+						"downbutton": {
+							"type": "string",
+							"title": "Down",
+							"placeholder": "eg: KEYCODE_DPAD_DOWN",
+							"minLength": 9
+						},
+						"leftbutton": {
+							"type": "string",
+							"title": "Left",
+							"placeholder": "eg: KEYCODE_DPAD_LEFT",
+							"minLength": 9
+						},
+						"rightbutton": {
+							"type": "string",
+							"title": "Right",
+							"placeholder": "eg: KEYCODE_DPAD_RIGHT",
+							"minLength": 9
+						},
+						"selectbutton": {
+							"type": "string",
+							"title": "Select",
+							"placeholder": "eg: KEYCODE_ENTER",
+							"minLength": 9
 						},
 						"backbutton": {
 							"type": "string",
@@ -348,12 +372,12 @@
 									"flex-direction": "row",
 									"items": [
 										{
-											"key": "accessories[].playbacksensordelay",
-											"flex": "1 1 100px"
-										},
-										{
 											"key": "accessories[].playbacksensorexclude",
 											"flex": "2 2 200px"
+										},
+										{
+											"key": "accessories[].playbacksensordelay",
+											"flex": "1 1 100px"
 										}
 									]
 								}
@@ -363,63 +387,133 @@
 							"title": "Control Center Remote and Power ON/OFF",
 							"expandable": true,
 							"expanded": false,
-							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can also put a shell script instead of keycode to run your own command. Put \"shell\" identifier to let the plugins know it's a shell script, eq: \"shell sh ./myscript.sh\"",
+							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can also put a shell script instead of keycode to run your own command. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
 							"items": [
 								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
+									"title": "Volume",
+									"description": "Costum ADB keycode or shell script for control center remote volume control",
+									"expandable": false,
+									"expanded": true,
 									"items": [
 										{
-											"key": "accessories[].volumeup",
-											"flex": "1 1 100px"
-										},
-										{
-											"key": "accessories[].volumedown",
-											"flex": "1 1 100px"
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].volumeup",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].volumedown",
+													"flex": "1 1 100px"
+												}
+											]
 										}
 									]
 								},
 								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
+									"title": "D-Pad",
+									"description": "Costum ADB keycode or shell script for control remote center control",
+									"expandable": false,
+									"expanded": true,
 									"items": [
 										{
-											"key": "accessories[].playpausebutton",
-											"flex": "1 1 100px"
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].upbutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"flex": "1 1 100px"
+												}
+											]
+										}, 
+										{
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].leftbutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].selectbutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].rightbutton",
+													"flex": "1 1 100px"
+												}
+											]
 										},
 										{
-											"key": "accessories[].backbutton",
-											"flex": "1 1 100px"
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].downbutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"flex": "1 1 100px"
+												}
+											]
+										},
+										{
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].playpausebutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].backbutton",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].infobutton",
+													"flex": "1 1 100px"
+												}
+											]
 										}
 									]
 								},
 								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
+									"title": "Power",
+									"description": "Costum ADB keycode or shell script for power",
+									"expandable": false,
+									"expanded": true,
 									"items": [
 										{
-											"key": "accessories[].infobutton",
-											"flex": "1 1 100px"
-										}
-									]
-								},
-								{
-									"type": "flex",
-									"displayFlex": true,
-									"flex-direction": "row",
-									"items": [
-										{
-											"key": "accessories[].poweron",
-											"flex": "1 1 100px"
-										},
-										{
-											"key": "accessories[].poweroff",
-											"flex": "1 1 100px"
-										}
+											"type": "flex",
+											"displayFlex": true,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].poweron",
+													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].poweroff",
+													"flex": "1 1 100px"
+												}
 
+											]
+										}
 									]
 								}
 							]

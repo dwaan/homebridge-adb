@@ -15,33 +15,33 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 
 ## Prerequisite
 
-* Install Homebridge, Homebridge Config UI X (this plugin support web configuration over there), and this plugins
+1. Install Homebridge, Homebridge Config UI X (this plugin support web configuration over there), and this plugins
 	```
 	sudo npm install -g --unsafe-perm homebridge homebridge-adb
 	```
 
-* Install ADB tools inside Homebridge server. Open Homebridge Config UI X in your browser then navigate to terminal, and then run this command:
-	* If the homebridge server is inside Ubuntu, use this command:
+2. Install ADB tools inside Homebridge server. Open Homebridge Config UI X in your browser then navigate to terminal or ssh to your homebridge server, and then run this command:
+	* If the homebridge server run inside Ubuntu, use this command:
 		```
 		sudo apt-get install android-tools-adb android-tools-fastboot
 		```
-	*  Or, if the homebridge is inside Docker container like the one from of oznu/docker-homebridge, please refer to **Docker container** section
+	*  Or, if the homebridge run inside Docker container like the one from oznu/docker-homebridge, please refer to **Docker container** section
 	*  Or, if you're using other OS, please refer this link to download the ADB tools: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
-	*  To check if the ADB installed properly, run this command:
+	*  Check if the ADB installed properly by running this command:
 		```
 		adb version
 		```
 		This will output something like `Android Debug Bridge version x.x.x`
 
-* Enable Developer mode in your Android device, visit this documentation for more information [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
+3. Enable Developer mode in your Android device, visit this documentation for more information [https://developer.android.com/studio/debug/dev-options](https://developer.android.com/studio/debug/dev-options)
 
-* **IMPORTANT**: Some Android device doesn't have support remote ADB by default. If your device is one of them, connect your device with USB cable to any computer with ADB installed. Open terminal and run this command:
+4. **IMPORTANT**: Some Android device doesn't support "Remote ADB" by default. If your device is one of them, connect your device with USB cable to any computer with ADB installed. Open terminal and run this command:
 	```
 	adb tcpip 5555
 	```
 	if no error produced, disconnect unplug the USB cable from the computer.
 
-* _Optionally_, run this command to make sure you can connect to device:
+5. _OPTIONAL_ Run this command to make sure you can connect to device:
 	```
 	adb connect your-device-ip
 	```
@@ -49,22 +49,22 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 	```
 	adb kill-server
 	```
-	After that reconnect your device again with previous adb connect. And after that, you should able to run this command
+	After that reconnect your device again with previous adb connect. Test your adb connection by running this command:
 	```
 	adb -s your-device-ip shell "getprop ro.product.model"
 	```
-	and get it will output your device model.
+	This command will output your device model.
 
 ### Docker container based on [oznu/docker-homebridge](https://github.com/oznu/docker-homebridge)
 
-*  (Mandatory) If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), run this command in terminal to install adb
+*  **MANDATORY** If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), run this command in terminal to install adb
 	```shell
 	# Install adb, required by the homebridge-adb plugin
 	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/community/ add android-tools
 	```
 	You can use other version of repo, but I only tested the v3.14 repo, and it seems it's the only adb tools that work with oznu/docker-homebridge .
 
-* (Mandatory) If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), run this command in terminal to install adb
+* **MANDATORY** If you're using a container based on Debian (like the `oznu/docker-homebridge:ubuntu` & `oznu/docker-homebridge:debian` docker image), run this command in terminal to install adb
 	```shell
 	# Update apt package index
 	apt-get update
@@ -73,13 +73,13 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 	apt-get install -y android-tools-adb android-tools-fastboot
 	```
 
-*  (Optional) Append the followings line to your `config/startup.sh` to install this plugin on every container restart:
+*  _OPTIONAL_ Append the followings line to your `config/startup.sh` to install this plugin on every container restart:
 	```shell
 	# Install the homebridge-adb plugin
 	npm install homebridge-adb
 	```
 	
-* (Optional) If you run into issues when connecting your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
+* _OPTIONAL_ If you run into issues when connecting your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
 	```shell
 	# Fix connection issues for the homebridge-adb plugin
 	adb connect $YOUR_ANDROID_DEVICE_IP
@@ -144,78 +144,28 @@ Here an example of configuration that you can use. If you're using Homebridge Co
     ]
 
 * **platform** (mandatory): the name of this plugin.
-* **name** (mandatory): the name of the device.
-* **ip** (mandatory): the IP address of the device.
-* *mac* (optional): the MAC address of the device. When provided and your device support Wake On LAN, this plugin will try to use Wake On LAN to Turn On your device. Useful if your device disconnect ADB connection after it turned off.
+* **name** (mandatory): the name of the accessory.
+* **ip** (mandatory): the IP address of the accessory.
+* *mac* (optional): the MAC address of the accessory. When provided and your accessory support Wake On LAN, this plugin will try to use Wake On LAN to Turn On your accessory. Useful if your accessory disconnect ADB connection after it turned off.
 * *path* (optional): if you prefer using direct path to access ADB instead of setting up in your global path, you can type the path here.
-* *interval* (optional): if not set, the plugin will check device statuses every 5000 miliseconds.
-* *timeout* (optional): if not set, the plugin will limit ADB execution timeout to 1000 miliseconds.
+* *interval* (optional): if not set, the plugin will check accessory statuses every 1000 miliseconds. The minimum interval value is 500. Lower then that, the plugin will flood your network.
+* *timeout* (optional): if not set, the plugin will limit ADB execution timeout to 3000 miliseconds. The minimum timeout value is 1000. Smaller value can make plugins more responsive but will prone to time out especially when your network is slow.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you leave this blank, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.
 	* *name* (mandatory): the name of the input.
 	* *id* (mandatory): the application id. The id will be use for input switcher in Home app. If you put random id, the input will move to "other".
 	* *adb* (optional): you can run your own ADB shell command here, such as: `monkey -p com.app.id 1`. This is an ADB shell command, so you doesn't need to type "adb -s ipaddress shell ...".
 * *playbacksensor* (optional): if set to *true*, plugin will create a motion sensor based on playback activity (either video or music).
 * *category* (optional): you can choose from this categories: *APPLE_TV, TELEVISION, TV_STREAMING_STICK, TV_SET_TOP_BOX, AUDIO_RECEIVER, or SPEAKER*. Home app will display different icon based on the category you choose.
-* *volumeup*, *volumedown*, *infobutton*, *playpauseobutton*, *backbutton*, *poweron*, *poweroff* (optional): assign custom ADB keycode for Remote control action in iOS Control Center. You can put one or more keycodes by seperating them with space, eg: `volumeup: "KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN"`. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the keycode list. You can also put a shell script instead of keycode to run your own command. Put `shell` identifier to let the plugins know it's a shell script, eq: `volumeup: "shell sh ./myscript.sh"`
+* *volumeup*, *volumedown*, *upbutton*, *leftbutton*, *rightbutton*, *leftbutton*, *infobutton*, *playpauseobutton*, *backbutton*, *poweron*, *poweroff* (optional): assign custom ADB keycode for Remote control action in iOS Control Center. You can put one or more keycodes by seperating them with space, eg: `volumeup: "KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN"`. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the keycode list. You can also put a shell script instead of keycode to run your own command. Put `shell` identifier to let the plugins know it's a shell script, eg: `volumeup: "shell sh ./myscript.sh"`
 * *hidenumber* (optional): if set to *true*, plugin will hide number inputs in Home App.
 * *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
 * *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 * *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
 * *skipSpeaker* (optional): if set to *true*, an accompanying speaker will not be initialized for the device and will disable volume control in Control Center Remote.
 
-### **GOOD TO KNOW**: ADB commands that this plugin use
 
-* Device name
-	```
-	adb -s your-device-ip shell "getprop ro.product.manufacturer"
-	```
-* Device model
-	```
-	adb -s your-device-ip shell "getprop ro.product.model"
-	```
-* Device serial number
-	```
-	adb -s your-device-ip "getprop ro.serialno"
-	```
-* To run "keyboard" command like up, down, sleep, awake, volume control, etc
-	```
-	adb -s your-device-ip shell "input keyevent KEYCODE"
-	```
-* To know device sleep status based on whether secreen is turned on or off
-	```
-	adb -s your-device-ip shell 'dumpsys power | grep mHoldingDisplay | cut -d = -f 2'
-	```
-* Running an app using their package name
-	```
-	adb -s your-device-ip shell "monkey -p package.name 1"
-	```
-* To know current on screen app
+## Questions and Support
 
-	New:
-	```
-	adb -s your-device-ip shell "dumpsys activity activities | grep ' ResumedActivity'"
-	```
-	Old:
-	```
-	adb -s your-device-ip shell "dumpsys window windows | grep -E mFocusedApp"
-	```
+If your have any question, refer to [FAQ.md](FAQ.md) first before sending GitHub issues.
 
-
-## FAQ
-
-* My playback sensor doesnt seem to working after updating to 1.4.3 from 1.4.x
-	* Remove your playback sensor and the readd it again in Home app, it seems like the new code causing Homekit to unrecognized it.
-* My device is not responding after updating to 1.4.*
-	* Due additional new features of playback sensor, HomeKit is unable to recognize the old accessory due to different characteristics. To fix this, you need to remove your accesory from Home app, then rename you device in config.json, and restart Homebridhe. This will create a new accesories that you can re-add again in home app. When you add them, be sure to rename your new accessory the same as to the old one in Home app if posible, this hopefully will retain your automations.
-* Where can I use volume and D-Pad control for my device?
-	* First turn on "Apple TV Remote" control from your iOS device inside Settings -> Control Center. Then swipe down Control Center, you'll see a remote icon. Tap the remote icon to open the remote, you can use your iOS device screen for the D-Pad, and use your iOS device physical volume button to control your device volume.
-* Why I can't turn on my device after turning it off?
-	* Your device might disconnected from network connection after you turn off your device. You need to turn it on manually. Or, please make sure your device still able to recieve network connection when it turned off, check your device settings for it.
-* Is this safe?
-	* Actually I don't know, it feels very dirty (I need to wash my hand everytime I use this) and hacky, but it works for me.
-* I found some bugs, what should I do?
-	* You can submit your bugs here [https://github.com/dwaan/homebridge-adb/issues](https://github.com/dwaan/homebridge-adb/issues) or you can help me to fix it by sending pull request.
-* Can this plugins do (insert stuff you want to do to your device)?
-	* I think so, ADB can basically control your device remotely. If you have other idea for what this can do, you can submit your idea as an issue.
-* Can I buy you a beer?
-	* No, [but you can buy me an Ice cream](https://www.buymeacoffee.com/dwaan). But if you like this plugins feel free to stared this repo.
+If want to support plugin, [you can buy me an Ice cream by follow this link](https://www.buymeacoffee.com/dwaan). Or feel free to share and stared this repo.

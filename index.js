@@ -47,14 +47,12 @@ class ADBPlugin {
 		this.mac = this.config.mac || "";
 		// Interval
 		this.interval = this.config.interval || 1000;
-		// Can't be lower than 300 miliseconds, it will flood your network
-		if(this.interval < 300) this.interval = 300;
+		// Can't be lower than 500 miliseconds, it will flood your network
+		if(this.interval < 500) this.interval = 500;
 		// Show more debug
 		this.debug = this.config.debug || false;
-		// Skip speaker creation
-		this.skipSpeaker = this.config.skipSpeaker || false;
 		// Exec timeout
-		this.timeout = this.config.timeout || 1000;
+		this.timeout = this.config.timeout || 3000;
 		if(this.timeout < 1000) this.timeout = 1000;
 		this.basetimeout = this.timeout;
 		// Inputs
@@ -97,7 +95,12 @@ class ADBPlugin {
 				useactivities: 0,
 				usewindows: 0,
 				onprogress: NO,
-				onstatuschange: false
+				onstatuschange: false,
+				initialized: false
+			},
+			speaker: {
+				skip: this.config.skipSpeaker || false,
+				initialized: false
 			},
 			playback: {
 				status: PAUSE,
@@ -115,6 +118,9 @@ class ADBPlugin {
 			info: "",
 			debug: ["", ""]
 		}
+
+		// Exec statuse
+		this.execStatus = [];
 
 		/**
 		 * Create the accessory
@@ -161,7 +167,7 @@ class ADBPlugin {
 		this.displayInfo(`Initializing`);
 
 		// Get the accessory information 
-		this.getAccessoryInformations((stdout) => {
+		this.getAccessoryInformations(() => {
 			// Handle On Off
 			this.handleOnOff();
 
@@ -185,7 +191,7 @@ class ADBPlugin {
 	 * Get accessory information to be used in Home app as identifier
 	 */
 	getAccessoryInformations(callback) {
-		if(!this.initAccessory) {
+		if(!this.adbAccessory.initialized) {
 			this.exec(`${this.path}adb -s ${this.ip} shell "getprop ro.product.model && getprop ro.product.manufacturer && getprop ro.serialno"`, (err, stdout) => {
 				// Get accessory information
 				if(err) stdout = ["", "", ""];
@@ -194,11 +200,11 @@ class ADBPlugin {
 				// Create inputs
 				this.createInputs();
 
-				// Create speaker services
-				this.createTelevisionSpeakers();
-
 				// Publish tv accessories
 				this.createTelevision(stdout);
+
+				// Create speaker services
+				this.createTelevisionSpeakers();
 
 				// Playback sensor
 				this.createPlaybackSensor(stdout);
@@ -209,7 +215,7 @@ class ADBPlugin {
 				if(err) this.log.error(`\n\nWARNING:\nUnrecognized accessory - "${this.name}".\nPlease check if the accessory's IP address is correct.\nIf your accessory is turned OFF, please turn it ON.\n`);
 				// Accessory finish initialzing
 				else {
-					this.initAccessory = true;
+					this.adbAccessory.initialized = true;
 					this.displayInfo(`Accessory initialized.`);
 				}
 			});
@@ -243,7 +249,7 @@ class ADBPlugin {
 	 * input accessories
 	 */
 	createInputs() {
-		if(this.inputs.length > 0) {
+		if(this.inputs.length > 0 && !this.adbAccessory.input.initialized) {
 			for (let i = 0; i < 50; i++) {
 				let
 					input = this.inputs[i],
@@ -285,6 +291,8 @@ class ADBPlugin {
 					this.inputs[i].service = service;
 				}
 			};
+
+			this.adbAccessory.input.initialized = true;
 		}
 	}
 
@@ -292,7 +300,7 @@ class ADBPlugin {
 	 * Create a speaker service to allow volume control
 	 */
 	createTelevisionSpeakers() {
-		if(!this.skipSpeaker) {
+		if(!this.adbAccessory.speaker.skip) {
 			this.accessoryTelevisionSpeakerService = this.accessory.addService(Service.TelevisionSpeaker);
 
 			this.accessoryTelevisionSpeakerService
@@ -371,7 +379,7 @@ class ADBPlugin {
 							this.execOrKeycodeWithTimeout(this.config.poweron || "KEYCODE_POWER", 15000, (err, stdout) => {
 								if(err) {
 									this.displayInfo("Power On - Failed");
-									this.displayDebug("Error: " + stdout);
+									if(stdout) this.displayDebug("Error: " + stdout);
 									state = !state;
 								} else {
 									this.displayDebug("Power On");
@@ -389,7 +397,7 @@ class ADBPlugin {
 						this.execOrKeycode(this.config.poweroff || "KEYCODE_POWER", (err, stdout) => {
 							if(err) {
 								this.displayInfo("Power Off - Failed");
-								this.displayDebug("Error: " + stdout);
+								if(stdout) this.displayDebug("Error: " + stdout);
 								state = !state;									
 							} else {
 								this.displayDebug("Power Off");
@@ -414,7 +422,7 @@ class ADBPlugin {
 	 * Handle volume control
 	 */
 	handleVolume() {
-		if(!this.skipSpeaker) {
+		if(!this.adbAccessory.speaker.skip) {
 			// Volume control
 			this.accessoryTelevisionSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
 				.on('set', (state, callback) => {
@@ -531,23 +539,23 @@ class ADBPlugin {
 						break;
 					}
 					case Characteristic.RemoteKey.ARROW_UP: {
-						key = 'KEYCODE_DPAD_UP';
+						key = this.config.upbutton || 'KEYCODE_DPAD_UP';
 						break;
 					}
 					case Characteristic.RemoteKey.ARROW_DOWN: {
-						key = 'KEYCODE_DPAD_DOWN';
+						key = this.config.downbutton || 'KEYCODE_DPAD_DOWN';
 						break;
 					}
 					case Characteristic.RemoteKey.ARROW_LEFT: {
-						key = 'KEYCODE_DPAD_LEFT';
+						key = this.config.leftbutton || 'KEYCODE_DPAD_LEFT';
 						break;
 					}
 					case Characteristic.RemoteKey.ARROW_RIGHT: {
-						key = 'KEYCODE_DPAD_RIGHT';
+						key = this.config.rightbutton || 'KEYCODE_DPAD_RIGHT';
 						break;
 					}
 					case Characteristic.RemoteKey.SELECT: {
-						key = 'KEYCODE_ENTER';
+						key = this.config.selectbutton || 'KEYCODE_ENTER';
 						break;
 					}
 					case Characteristic.RemoteKey.BACK: {
@@ -716,7 +724,7 @@ class ADBPlugin {
 
 				if(this.inputs.length > 0) {
 					// Checking if it's a Home or registered app
-					if(stdout != this.inputs[this.adbAccessory.input.index].id && stdout != HOME_APP_ID) {
+					if(stdout != this.inputs[this.adbAccessory.input.index].id) {
 						this.inputs.forEach((input, i) => {
 							if(stdout == input.id) {
 								this.adbAccessory.input.index = i;
@@ -823,9 +831,9 @@ class ADBPlugin {
 					}
 				} else {
 					// check power status from accessory
-					stdout = stdout.split('=')[1];
-					if((stdout == 'true' && this.adbAccessory.power.status == OFF) || (stdout == 'false' && this.adbAccessory.power.status == ON)) {
-						this.adbAccessory.power.status = !this.adbAccessory.power.status;
+					stdout = stdout.split('=')[1] == 'true' ? ON : OFF;
+					if(stdout != this.adbAccessory.power.status) {
+						this.adbAccessory.power.status = stdout;
 						this.displayInfo(`Accessory is ${this.adbAccessory.power.status ? "ON." : "OFF."}`);
 					}
 				}
@@ -843,7 +851,7 @@ class ADBPlugin {
 	/**
 	 * Connect to the accessory
 	 */
-	connect(timeout) {
+	connect() {
 		if(this.adbAccessory.connecting == NO) {
 			this.displayDebug(`Reconnecting...`);
 			this.adbAccessory.connecting = true;
@@ -887,9 +895,6 @@ class ADBPlugin {
 
 					// Set it online
 					this.adbAccessory.status = ONLINE;
-
-					// Get and set accessory information
-					this.getAccessoryInformations();
 
 					this.displayDebug(`Reconnected`);
 				}
@@ -976,21 +981,28 @@ class ADBPlugin {
 	 * @param {function} callback callback when command succesully executed
 	 */
 	execWithTimeout(cmd, timeout, callback) {
-		exec(cmd, { timeout: timeout }, (err, stdout, stderr) => {
-			stdout = stdout.trim() || stderr.trim();
+		// Same commands will only run one at a time
+		if(!this.execStatus[cmd]) {
+			this.execStatus[cmd] = true;
 
-			if(err ||
-			   stdout.includes(`error: device '${this.ip}' not found`) || 
-			   stdout.includes(`error: closed`) || 
-			   stdout.includes(`error: device offline`)
-			) {
-				this.adbAccessory.status = OFFLINE;
-				if(callback) callback(true, stdout);
-			} else {
-				this.adbAccessory.status = ONLINE;
-				if(callback) callback(stdout.includes(`Operation timed out`), stdout);
-			}
-		});
+			exec(cmd, { timeout: timeout, maxBuffer: 500 }, (err, stdout, stderr) => {
+				stdout = stdout.trim() || stderr.trim();
+
+				if(err ||
+				stdout.includes(`error: device '${this.ip}' not found`) || 
+				stdout.includes(`error: closed`) || 
+				stdout.includes(`error: device offline`)
+				) {
+					this.adbAccessory.status = OFFLINE;
+					if(callback) callback(true, stdout);
+				} else {
+					this.adbAccessory.status = ONLINE;
+					if(callback) callback(stdout.includes(`Operation timed out`), stdout);
+				}
+
+				this.execStatus[cmd] = false;
+			});
+		}
 	}
 
 
