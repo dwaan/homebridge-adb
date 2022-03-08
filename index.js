@@ -786,7 +786,6 @@ class ADBPlugin {
 					if(err) {
 						this.displayDebug(`Check Input - Error while using "dumpsys window"`);
 						this.adbAccessory.input.usewindows = -1;
-						console.log(this.adbAccessory.input.usewindows, stdout);
 					} else {
 						this.displayDebug(`Check Input - Using "dumpsys window"`);
 						this.adbAccessory.input.usewindows = parseInput(stdout);
