@@ -91,57 +91,57 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 
 Here an example of configuration that you can use. If you're using Homebridge Config UI X, you can configure your device there, but there's a small hiccup with Inputs. It only display one input, but if you press add, it will display the rest of the inputs.
 
-    "platforms": [
-        {
-            "platform": "HomebridgeADB",
-            "accessories": [
-                {
-                    "name": "NVIDIA Shield",
-                    "interval": 1000,
-                    "ip": "192.168.1.136",
+	"platforms": [
+		{
+			"platform": "HomebridgeADB",
+			"accessories": [
+				{
+					"name": "NVIDIA Shield",
+					"interval": 1000,
+					"ip": "192.168.1.136",
 					"timeout": 1000,
-                    "playbacksensor": true,
-                    "playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
-                    "backbutton": "shell: sh ./myscript.sh",
-                    "infobutton": "KEYCODE_HOME KEYCODE_HOME",
-                    "category": "TV_STREAMING_STICK",
-                    "hidenumber": true,
-                    "hidehome": true,
-                    "hideother": true,
-                    "debug": true,
-                    "skipSpeaker": false,
-                    "inputs": [
-                        {
-                            "name": "HBO Max",
-                            "id": "com.hbo.hbonow"
-                        },
-                        {
-                            "name": "Apple Music",
-                            "id": "com.apple.android.music"
-                        },
-                    ]
-                },
-                {
-                    "name": "Meizu",
-                    "ip": "192.168.1.121",
-                    "playbacksensor": false,
-                    "mac": "97:b6:e8:46:9f:cb",
-                    "poweroff": "KEYCODE_SLEEP",
-                    "inputs": [
-                        {
-                            "name": "Termux",
-                            "id": "com.termux",
-                            "adb": "monkey -p com.termux 1"
-                        },
-                        {
-                            "name": "Apple Music",
-                            "id": "com.apple.android.music"
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+					"playbacksensor": true,
+					"playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
+					"backbutton": "shell sh ./myscript.sh",
+					"infobutton": "KEYCODE_HOME KEYCODE_HOME",
+					"category": "TV_STREAMING_STICK",
+					"hidenumber": true,
+					"hidehome": true,
+					"hideother": true,
+					"debug": true,
+					"skipSpeaker": false,
+					"inputs": [
+						{
+							"name": "HBO Max",
+							"id": "com.hbo.hbonow"
+						},
+						{
+							"name": "Apple Music",
+							"id": "com.apple.android.music"
+						},
+					]
+				},
+				{
+					"name": "Meizu",
+					"ip": "192.168.1.121",
+					"playbacksensor": false,
+					"mac": "97:b6:e8:46:9f:cb",
+					"poweroff": "KEYCODE_SLEEP",
+					"inputs": [
+						{
+							"name": "Termux",
+							"id": "com.termux",
+							"adb": "monkey -p com.termux 1"
+						},
+						{
+							"name": "Apple Music",
+							"id": "com.apple.android.music"
+						}
+					]
+				}
+			]
+		}
+	]
 
 * **platform** (mandatory): the name of this plugin.
 * **name** (mandatory): the name of the accessory.
