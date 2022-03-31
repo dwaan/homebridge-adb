@@ -29,7 +29,7 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 	*  Or, if you're using other OS, please refer this link to download the ADB tools: [https://developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools)
 	*  Check if the ADB installed properly by running this command:
 		```
-		adb version
+		adb --version
 		```
 		This will output something like `Android Debug Bridge version x.x.x`
 
