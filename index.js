@@ -44,28 +44,21 @@ class ADBPlugin {
 		// Mac
 		this.mac = this.config.mac || "";
 		// Interval
-		this.interval = this.config.interval || 1000;
+		this.interval = this.config.interval || 2500;
 		if (this.interval < 500) this.interval = 500;
 		// Show more debug
 		this.debug = this.config.debug || false;
 		// Exec timeout
-		this.timeout = this.config.timeout || 3000;
+		this.timeout = this.config.timeout || 2500;
 		if (this.timeout < 1000) this.timeout = 1000;
-
-		// Accessory status
-		this.adb = new adb(this.ip, {
-			path: this.path,
-			interval: this.interval,
-			timeout: this.timeout
-		});
 
 		// Inputs
 		this.input = this.config.inputs || [];
 		this.inputOnChange = NO;
 		this.inputIndex = 0;
 		this.hidenumber = this.config.hidenumber || false;
-		this.hideHome = this.config.hideHome || false;
-		this.hideOther = this.config.hideOther || false;
+		this.hideHome = this.config.hidehome || false;
+		this.hideOther = this.config.hideother || false;
 		if (!this.hideHome) this.input.unshift({ "name": "Home", "id": HOME_APP_ID });
 		if (!this.hideOther) this.input.push({ "name": "Other", "id": OTHER_APP_ID });
 		// Category
@@ -74,25 +67,25 @@ class ADBPlugin {
 		// Speaker
 		this.enableSpeaker = !this.config.skipSpeaker || YES;
 		// Playback Sensor
+		this.isPlaying = NO;
 		this.enablePlaybackSensor = this.config.playbacksensor || NO;
+		this.playbackSensorDelayOff = this.config.playbacksensordelay || 10000;
+		this.playbackSensorExclude = this.config.playbacksensorexclude || "";
 		// Power
 		this.powerOnChange = NO;
 		this.wolLoop = EMPTY;
+		this.retryPowerOn = this.retrypoweron || 10;
 		// App
 		this.currentAppID = HOME_APP_ID;
 
-		// Debug and Info
-		this.message = {
-			stdout: {
-				prev: ""
-			},
-			info: "",
-			debug: ["", ""]
-		}
-
-		// Exec statuse
-		this.execStatus = [];
-		this.connectCallback = EMPTY;
+		// Accessory status
+		this.adb = new adb(this.ip, {
+			path: this.path,
+			interval: this.interval,
+			timeout: this.timeout,
+			playbackDelayOff: this.playbackSensorDelayOff,
+			retryPowerOn: this.retryPowerOn
+		});
 
 		/**
 		 * Create the Homekit Accessories
@@ -146,10 +139,12 @@ class ADBPlugin {
 
 		this.displayInfo(`Initializing`);
 
-		// Get the accessory information
-		this.adb.update().then(async () => {
-			// Get device information
-			await this.getAccessoryInformations()
+		// Get device information
+		this.getAccessoryInformations().then(() => {
+			// Get the accessory information
+			this.adb.update().catch(error => {
+				if (error) this.displayDebug(`Update error message:\n${error}`);
+			});
 
 			// Handle On Off
 			this.handleOnOff();
@@ -166,11 +161,11 @@ class ADBPlugin {
 			// Power events
 			this.adb.on("awake", () => {
 				this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
-				this.displayInfo("\x1B[32mAwake\x1B[0m");
+				this.displayInfo(this.green(`Awake`));
 			});
 			this.adb.on("sleep", () => {
 				this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
-				this.displayInfo("\x1B[31mSleep\x1B[0m");
+				this.displayInfo(this.red(`Sleep`));
 			});
 			// App change event
 			this.parseInput(this.adb.currentAppID);
@@ -179,14 +174,14 @@ class ADBPlugin {
 			});
 			// Playback event
 			if (this.enablePlaybackSensor == YES) {
-				this.adb.emit("playback");
 				this.adb.on("playback", () => {
-					this.displayInfo(this.adb.isPlayback ? `Playback - On` : `Playback - Off`);
-					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.adb.isPlayback);
+					if (this.isPlaying == this.adb.isPlayback) return;
+
+					this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
+					this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
+					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
 				});
 			}
-		}).catch(error => {
-			if (error) this.displayDebug(`Error message:\n${error}`);
 		});
 	}
 
@@ -301,7 +296,7 @@ class ADBPlugin {
 		this.accessoryTVSpeakerService
 			.setCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE)
 			.setCharacteristic(Characteristic.VolumeControlType, Characteristic.VolumeControlType.RELATIVE);
-		// this.accessoryService.addLinkedService(this.accessoryTVSpeakerService);
+		this.accessoryService.addLinkedService(this.accessoryTVSpeakerService);
 		this.displayDebug(`Speaker created`);
 	}
 
@@ -345,10 +340,8 @@ class ADBPlugin {
 
 					if (this.mac) {
 						wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
-							if (err) throw error;
-
 							this.adb.state().then(({ result, message }) => {
-								if (!result) throw message;
+								if (error || !result) throw message;
 
 								this.powerOnChange = NO;
 								this.displayDebug("Wake On LAN - Success");
@@ -356,11 +349,11 @@ class ADBPlugin {
 								this.powerOnChange = NO;
 								this.displayInfo("Wake On LAN - Failed");
 
-								if (error) this.displayDebug(`Error message:\n${error}`);
+								if (error) this.displayDebug(`WOL error message:\n${error}`);
 							});
 						});
 					} else {
-						this.adb.powerOn(this.config.poweroff).then(({ result, message }) => {
+						this.adb.powerOn(this.config.poweron).then(({ result, message }) => {
 							if (!result) throw message;
 
 							this.powerOnChange = NO;
@@ -370,7 +363,7 @@ class ADBPlugin {
 							this.powerOnChange = NO;
 							this.displayDebug("Power On - Failed");
 
-							if (error) this.displayDebug(`Error message:\n${error}`);
+							if (error) this.displayDebug(`Power on error message:\n${error}`);
 						});
 					}
 				} else {
@@ -386,12 +379,10 @@ class ADBPlugin {
 						this.powerOnChange = NO;
 						this.displayDebug("Power Off - Failed");
 
-						if (error) this.displayDebug(`Error message:\n${error}`);
+						if (error) this.displayDebug(`Power off error message:\n${error}`);
 					});
 				}
-			}).onGet(() => {
-				return this.adb.isAwake ? Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE;
-			});
+			}).onGet(() => this.adb.isAwake ? Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE);
 	}
 
 	/**
@@ -404,13 +395,10 @@ class ADBPlugin {
 			.onSet((state) => {
 				this.adb.sendKeycode(state ? this.config.wolumedown || "KEYCODE_VOLUME_DOWN" : this.config.wolumeup || "KEYCODE_VOLUME_UP").then(({ result, message }) => {
 					if (!result) throw message;
-
-					this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
-					this.powerOnChange = NO;
-					this.displayInfo(`Volume - ${state ? 'Increased' : 'Decreased'}`);
+					this.displayDebug(`Volume - ${state ? 'Increased' : 'Decreased'}`);
 				}).catch(error => {
-					this.displayInfo(`Volume - Failed`);
-					if (error) this.displayDebug(`Error message:\n${error}`);
+					this.displayDebug(`Volume - Failed`);
+					if (error) this.displayDebug(`Volume error message:\n${error}`);
 				});
 			});
 	}
@@ -447,9 +435,10 @@ class ADBPlugin {
 				}).catch(error => {
 					this.inputOnChange = NO;
 					this.displayInfo(`Can't open: ${this.input[state].name}`)
-					if (error) this.displayDebug(`Error message:\n${error}`);
+					if (error) this.displayDebug(`Launch error message:\n${error}`);
 				});
-			});
+			})
+			.onGet(() => this.inputIndex);
 	}
 
 	/**
@@ -457,9 +446,7 @@ class ADBPlugin {
 	 */
 	handleMediaAsSensor() {
 		this.accessoryPlaybackSensorService.getCharacteristic(Characteristic.MotionDetected)
-			.onGet(() => {
-				return this.adb.isPlayback;
-			});
+			.onGet(() => this.isPlaying);
 	}
 
 	/**
@@ -514,14 +501,17 @@ class ADBPlugin {
 
 				this.adb.sendKeycode(key).then(({ result, message }) => {
 					if (!result) throw message;
-					this.displayInfo(`Remote Control - Sending: ${key}`);
+					this.displayDebug(`Remote Control - Sending: ${key}`);
 				}).catch(error => {
-					this.displayInfo(`Remote Control - Can't send: ${key}`)
-					if (error) this.displayDebug(`Error message:\n${error}`);
+					this.displayDebug(`Remote Control - Can't send: ${key}`)
+					if (error) this.displayDebug(`Remote error message:\n${error}`);
 				});
 			});
 	}
 
+
+	red(text) { return `\x1B[31m${text}\x1B[0m`; }
+	green(text) { return `\x1B[32m${text}\x1B[0m`; }
 
 	/**
 	 * A helper parse app id into usable form
@@ -576,11 +566,7 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayDebug(text) {
-		if (this.debug && this.message.debug[0] != text && this.message.debug[1] != text) {
-			this.message.debug[1] = this.message.debug[0];
-			this.message.debug[0] = text;
-			this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
-		}
+		this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
 	}
 
 	/**
@@ -588,10 +574,7 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayInfo(text) {
-		if (this.message.info != text) {
-			this.message.info = text;
-			this.log.info(`${this.name} - ${text}`);
-		}
+		this.log.info(`${this.name} - ${text}`);
 	}
 }
 

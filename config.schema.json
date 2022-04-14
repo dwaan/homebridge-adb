@@ -5,8 +5,8 @@
 	"headerDisplay": "A simple homebridge script to control remote ADB enabled Android device",
 	"footerDisplay": "For more information, see the [README](https://github.com/dwaan/homebridge-adb/blob/master/README.md)",
 	"schema": {
-	    "type": "object",
-	    "properties": {
+		"type": "object",
+		"properties": {
 			"accessories": {
 				"title": "Accessories",
 				"type": "array",
@@ -43,41 +43,146 @@
 						"timeout": {
 							"type": "number",
 							"title": "ADB Timeout",
-					        "oneOf": [
-								{ "title": "1000", "enum": ["1000"] },
-								{ "title": "1500", "enum": ["1500"] },
-								{ "title": "2000", "enum": ["2000"] },
-								{ "title": "2500", "enum": ["2500"] },
-								{ "title": "3000", "enum": ["3000"] },
-								{ "title": "3500", "enum": ["3500"] },
-								{ "title": "4000", "enum": ["4000"] },
-								{ "title": "4500", "enum": ["4500"] },
-								{ "title": "5000", "enum": ["5000"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "1000",
+									"enum": [
+										"1000"
+									]
+								},
+								{
+									"title": "1500",
+									"enum": [
+										"1500"
+									]
+								},
+								{
+									"title": "2000",
+									"enum": [
+										"2000"
+									]
+								},
+								{
+									"title": "2500",
+									"enum": [
+										"2500"
+									]
+								},
+								{
+									"title": "3000",
+									"enum": [
+										"3000"
+									]
+								},
+								{
+									"title": "3500",
+									"enum": [
+										"3500"
+									]
+								},
+								{
+									"title": "4000",
+									"enum": [
+										"4000"
+									]
+								},
+								{
+									"title": "4500",
+									"enum": [
+										"4500"
+									]
+								},
+								{
+									"title": "5000",
+									"enum": [
+										"5000"
+									]
+								}
+							]
 						},
 						"interval": {
 							"type": "number",
 							"title": "Polling interval",
-					        "oneOf": [
-								{ "title": "500", "enum": ["500"] },
-								{ "title": "1000", "enum": ["1000"] },
-								{ "title": "2500", "enum": ["2500"] },
-								{ "title": "5000", "enum": ["5000"] },
-								{ "title": "7500", "enum": ["7500"] },
-								{ "title": "10000", "enum": ["10000"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "500",
+									"enum": [
+										"500"
+									]
+								},
+								{
+									"title": "1000",
+									"enum": [
+										"1000"
+									]
+								},
+								{
+									"title": "2500",
+									"enum": [
+										"2500"
+									]
+								},
+								{
+									"title": "5000",
+									"enum": [
+										"5000"
+									]
+								},
+								{
+									"title": "7500",
+									"enum": [
+										"7500"
+									]
+								},
+								{
+									"title": "10000",
+									"enum": [
+										"10000"
+									]
+								}
+							]
 						},
 						"category": {
 							"type": "string",
 							"title": "Category",
-					        "oneOf": [
-								{ "title": "Apple TV", "enum": ["APPLE_TV"] },
-								{ "title": "Television", "enum": ["TELEVISION"] },
-								{ "title": "Streaming Stick", "enum": ["TV_STREAMING_STICK"] },
-								{ "title": "Set Top Box", "enum": ["TV_SET_TOP_BOX"] },
-								{ "title": "Audio Reciever", "enum": ["AUDIO_RECEIVER"] },
-								{ "title": "Speaker", "enum": ["SPEAKER"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Apple TV",
+									"enum": [
+										"APPLE_TV"
+									]
+								},
+								{
+									"title": "Television",
+									"enum": [
+										"TELEVISION"
+									]
+								},
+								{
+									"title": "Streaming Stick",
+									"enum": [
+										"TV_STREAMING_STICK"
+									]
+								},
+								{
+									"title": "Set Top Box",
+									"enum": [
+										"TV_SET_TOP_BOX"
+									]
+								},
+								{
+									"title": "Audio Reciever",
+									"enum": [
+										"AUDIO_RECEIVER"
+									]
+								},
+								{
+									"title": "Speaker",
+									"enum": [
+										"SPEAKER"
+									]
+								}
+							]
 						},
 						"inputs": {
 							"title": "Inputs",
@@ -109,46 +214,158 @@
 						"hidenumber": {
 							"type": "boolean",
 							"title": "Hide Inputs' number in Home App",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"hidehome": {
 							"type": "boolean",
 							"title": "Hide 'Home' Input in Home App",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"hideother": {
 							"type": "boolean",
 							"title": "Hide 'Other' Input in Home App",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"playbacksensor": {
 							"type": "boolean",
 							"title": "Playback as Motion Sensor",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"playbacksensordelay": {
 							"type": "number",
-							"title": "Sensor delay (ms)",
-					        "oneOf": [
-								{ "title": "500", "enum": ["500"] },
-								{ "title": "1000", "enum": ["1000"] },
-								{ "title": "2500", "enum": ["2500"] },
-								{ "title": "5000", "enum": ["5000"] },
-								{ "title": "7500", "enum": ["7500"] },
-								{ "title": "10000", "enum": ["10000"] }
-					        ]
+							"title": "Sensor off delay (ms)",
+							"oneOf": [
+								{
+									"title": "500",
+									"enum": [
+										"500"
+									]
+								},
+								{
+									"title": "1000",
+									"enum": [
+										"1000"
+									]
+								},
+								{
+									"title": "2500",
+									"enum": [
+										"2500"
+									]
+								},
+								{
+									"title": "5000",
+									"enum": [
+										"5000"
+									]
+								},
+								{
+									"title": "7500",
+									"enum": [
+										"7500"
+									]
+								},
+								{
+									"title": "10000",
+									"enum": [
+										"10000"
+									]
+								},
+								{
+									"title": "12500",
+									"enum": [
+										"12500"
+									]
+								},
+								{
+									"title": "15000",
+									"enum": [
+										"15000"
+									]
+								},
+								{
+									"title": "17500",
+									"enum": [
+										"17500"
+									]
+								},
+								{
+									"title": "20000",
+									"enum": [
+										"20000"
+									]
+								},
+								{
+									"title": "30000",
+									"enum": [
+										"30000"
+									]
+								},
+								{
+									"title": "40000",
+									"enum": [
+										"40000"
+									]
+								},
+								{
+									"title": "50000",
+									"enum": [
+										"50000"
+									]
+								}
+							]
 						},
 						"playbacksensorexclude": {
 							"type": "string",
@@ -158,18 +375,38 @@
 						"debug": {
 							"type": "boolean",
 							"title": "Display more debug message",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"skipSpeaker": {
 							"type": "boolean",
 							"title": "Skip speaker/volume creation",
-					        "oneOf": [
-								{ "title": "Yes", "enum": ["true"] },
-								{ "title": "No", "enum": ["false"] }
-					        ]
+							"oneOf": [
+								{
+									"title": "Yes",
+									"enum": [
+										"true"
+									]
+								},
+								{
+									"title": "No",
+									"enum": [
+										"false"
+									]
+								}
+							]
 						},
 						"upbutton": {
 							"type": "string",
@@ -223,6 +460,72 @@
 							"type": "string",
 							"title": "Power On",
 							"placeholder": "eg: KEYCODE_POWER"
+						},
+						"poweronretry": {
+							"type": "number",
+							"title": "Power On Retry",
+							"oneOf": [
+								{
+									"title": "1",
+									"enum": [
+										"1"
+									]
+								},
+								{
+									"title": "2",
+									"enum": [
+										"2"
+									]
+								},
+								{
+									"title": "3",
+									"enum": [
+										"3"
+									]
+								},
+								{
+									"title": "4",
+									"enum": [
+										"4"
+									]
+								},
+								{
+									"title": "5",
+									"enum": [
+										"5"
+									]
+								},
+								{
+									"title": "6",
+									"enum": [
+										"6"
+									]
+								},
+								{
+									"title": "7",
+									"enum": [
+										"7"
+									]
+								},
+								{
+									"title": "8",
+									"enum": [
+										"8"
+									]
+								},
+								{
+									"title": "9",
+									"enum": [
+										"9"
+									]
+								},
+								{
+									"title": "10",
+									"enum": [
+										"10"
+									]
+								}
+							]
 						},
 						"poweroff": {
 							"type": "string",
@@ -300,7 +603,6 @@
 									"key": "accessories[].interval",
 									"flex": "1 1 100px"
 								}
-
 							]
 						},
 						{
@@ -434,7 +736,7 @@
 													"flex": "1 1 100px"
 												}
 											]
-										}, 
+										},
 										{
 											"type": "flex",
 											"displayFlex": true,
@@ -510,15 +812,18 @@
 												{
 													"key": "accessories[].poweroff",
 													"flex": "1 1 100px"
+												},
+												{
+													"key": "accessories[].poweronretry",
+													"flex": "1 1 100px"
 												}
-
 											]
 										}
 									]
 								}
 							]
 						},
-					    {
+						{
 							"title": "Settings",
 							"expandable": true,
 							"expanded": false,
@@ -551,7 +856,7 @@
 										{
 											"key": "accessories[].hidehome",
 											"flex": "1 1 100px"
-										}											
+										}
 									]
 								},
 								{
@@ -562,11 +867,11 @@
 										{
 											"key": "accessories[].hideother",
 											"flex": "1 1 100px"
-										}										
+										}
 									]
 								}
 							]
-					    }
+						}
 					]
 				}
 			]
