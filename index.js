@@ -1,6 +1,5 @@
 let wol = require('wake_on_lan');
 let adb = require('nodejs-adb-wrapper');
-let exec = require('child_process').exec;
 let Service, Characteristic;
 
 const PLUGIN_NAME = 'homebridge-adb';
