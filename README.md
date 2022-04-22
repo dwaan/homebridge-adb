@@ -60,7 +60,9 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 *  **MANDATORY** If you're using a container based on Alpine Linux (like `oznu/docker-homebridge:latest`), run this command in terminal to install adb
 	```shell
 	# Install adb, required by the homebridge-adb plugin
-	apk --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.14/community/ add android-tools
+	echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/main/' >> /etc/apk/repositories
+	echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/community/' >> /etc/apk/repositories
+	apk add android-tools
 	```
 	You can use other version of repo, but I only tested the v3.14 repo, and it seems it's the only adb tools that work with oznu/docker-homebridge .
 
