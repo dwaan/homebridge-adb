@@ -302,8 +302,9 @@ class ADBPlugin {
 	/**
 	 * Create a playback sensor based on video playback
 	 * Due to limitation of ADB, support for playback will be limited
+	 * @param {string} output ADB output
 	 */
-	createPlaybackSensor(stdout) {
+	createPlaybackSensor(output) {
 		if (this.enablePlaybackSensor == NO) return;
 
 		// Add playback sensor
@@ -314,9 +315,9 @@ class ADBPlugin {
 
 		// Publish playback sensor
 		this.accessoryPlaybackSensorInfo
-			.setCharacteristic(Characteristic.Model, stdout[0] || "Android")
-			.setCharacteristic(Characteristic.Manufacturer, stdout[1] || "Homebridge ADB")
-			.setCharacteristic(Characteristic.SerialNumber, stdout[2] || this.ip);
+			.setCharacteristic(Characteristic.Model, output[0] || "Android")
+			.setCharacteristic(Characteristic.Manufacturer, output[1] || "Homebridge ADB")
+			.setCharacteristic(Characteristic.SerialNumber, output[2] || this.ip);
 		this.api.publishExternalAccessories(PLUGIN_NAME, [this.accessoryPlaybackSensor]);
 		this.displayDebug(`Sensor created`);
 	}
@@ -338,15 +339,21 @@ class ADBPlugin {
 					this.displayDebug("Trying to turn ON accessory. This will take awhile, please wait...");
 
 					if (this.mac) {
-						wol.wake(`${this.mac}`, { address: `${this.ip}` }, (error) => {
+						this.displayDebug("Wake On LAN - Sending magic");
+						wol.wake(`${this.mac}`, wol.WakeOptions, (error) => {
 							this.adb.state().then(({ result, message }) => {
-								if (error || !result) throw message;
+								if (error) throw error;
+								if (!result) throw message;
 
 								this.powerOnChange = NO;
 								this.displayDebug("Wake On LAN - Success");
+
+								this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 							}).catch(error => {
 								this.powerOnChange = NO;
 								this.displayInfo("Wake On LAN - Failed");
+
+								this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 
 								if (error) this.displayDebug(`WOL error message:\n${error}`);
 							});
@@ -356,11 +363,14 @@ class ADBPlugin {
 							if (!result) throw message;
 
 							this.powerOnChange = NO;
-
 							this.displayDebug("Power On - Success");
+
+							this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 						}).catch(error => {
 							this.powerOnChange = NO;
 							this.displayDebug("Power On - Failed");
+
+							this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 
 							if (error) this.displayDebug(`Power on error message:\n${error}`);
 						});
@@ -374,9 +384,13 @@ class ADBPlugin {
 
 						this.powerOnChange = NO;
 						this.displayDebug("Power Off - Success");
+
+						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 					}).catch(error => {
 						this.powerOnChange = NO;
 						this.displayDebug("Power Off - Failed");
+
+						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 
 						if (error) this.displayDebug(`Power off error message:\n${error}`);
 					});

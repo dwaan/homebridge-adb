@@ -29,10 +29,11 @@
 	},
 	"homepage": "https://github.com/dwaan/homebridge-adb#readme",
 	"dependencies": {
-		"nodejs-adb-wrapper": "^1.0.5",
+		"nodejs-adb-wrapper": "^1.1.0",
 		"wake_on_lan": "^1.0.0"
 	},
 	"devDependencies": {
-		"nodemon": "^2.0.15"
+		"nodemon": "^2.0.15",
+		"homebridge": "^1.3.4"
 	}
 }
