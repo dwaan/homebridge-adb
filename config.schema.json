@@ -636,7 +636,7 @@
 							"title": "Wake On LAN",
 							"expandable": true,
 							"expanded": false,
-							"description": "Plugin will try to use Wake On LAN when you provide your device MAC address. Useful when your device disconnected from Network after it turned off.",
+							"description": "Plugin will try to use Wake On LAN when you provide your device MAC address, if your device supported it. Useful when your device disconnected from Network after it turned off.",
 							"items": [
 								{
 									"type": "flex",
