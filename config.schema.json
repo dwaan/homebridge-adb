@@ -31,7 +31,7 @@
 						"path": {
 							"type": "string",
 							"title": "ADB Path",
-							"placeholder": "Eg: /usr/bin/ or c:\\adb-tools\\"
+							"placeholder": "Eg: /usr/bin/adb or c:\\adb-tools\\adb.exe"
 						},
 						"mac": {
 							"type": "string",

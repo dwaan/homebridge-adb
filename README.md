@@ -80,7 +80,7 @@ This plugins register it self as external accesorries. Make sure after adding Ho
 	# Install the homebridge-adb plugin
 	npm install homebridge-adb
 	```
-	
+
 * _OPTIONAL_ If you run into issues when connecting your android device (sometimes adb can't create the `$HOME/.android/adbkey`), add this line to your `config/startup.sh`:
 	```shell
 	# Fix connection issues for the homebridge-adb plugin
@@ -101,6 +101,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 					"name": "NVIDIA Shield",
 					"interval": 1000,
 					"ip": "192.168.1.136",
+					"path": "/usr/bin/adb",
 					"timeout": 1000,
 					"playbacksensor": true,
 					"playpauseobutton": "KEYCODE_MEDIA_PLAY_PAUSE",
@@ -149,7 +150,7 @@ Here an example of configuration that you can use. If you're using Homebridge Co
 * **name** (mandatory): the name of the accessory.
 * **ip** (mandatory): the IP address of the accessory.
 * *mac* (optional): the MAC address of the accessory. When provided and your accessory support Wake On LAN, this plugin will try to use Wake On LAN to Turn On your accessory. Useful if your accessory disconnect ADB connection after it turned off.
-* *path* (optional): if you prefer using direct path to access ADB instead of setting up in your global path, you can type the path here.
+* *path* (optional): if you prefer using direct path to access ADB instead of setting up in your global path, you can type the path here including the executable filename.
 * *interval* (optional): if not set, the plugin will check accessory statuses every 1000 miliseconds. The minimum interval value is 500. Lower then that, the plugin will flood your network.
 * *timeout* (optional): if not set, the plugin will limit ADB execution timeout to 3000 miliseconds. The minimum timeout value is 1000. Smaller value can make plugins more responsive but will prone to time out especially when your network is slow.
 * *inputs* (optional): by default the plugins will create Home for launcher shortcut and Other for previous app shortcut as input. If set, the plugins will add more input based on the config. To know your app id, please see your Homebridge log. When you leave this blank, and set *hidehhome* and *hideother* to true, the plugins will hide inputs in Home App.

@@ -14,7 +14,7 @@ A clear and concise description of what the bug is.
 A clear and concise description of what you expected to happen.
 
 **Log output**
-If applicable, add homebridge log output to help explain your problem or copy paste it into a text file and attach it if the log is more than 10 lines.
+If applicable, add homebridge log output to help explain your problem or copy paste it into a text file and attach it if the log is more than 10 lines. Make sure to set "debug" to true in config.js so plugins will output debug log
 
 **Device (please complete the following information):**
  - Name: [e.g. NVIDIA Shield]
