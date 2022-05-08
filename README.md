@@ -1,10 +1,11 @@
-<p align="center">
-
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
-
 [![npm-version](https://badgen.net/npm/v/homebridge-adb)](https://www.npmjs.com/package/homebridge-adb)
 [![npm-total-downloads](https://badgen.net/npm/dt/homebridge-adb)](https://www.npmjs.com/package/homebridge-adb)
+[![Donate](https://badgen.net/badge/buymeacoffee/donate?icon=https://ico.now.sh/buymeacoffee/fff)](https://www.buymeacoffee.com/dwaan)
+
+<p align="center">
+<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
 </p>
+
 # Homebridge ADB
 
 Not so simple homebridge plugin to control remote ADB enabled Android device. The idea is to make random Android based TV box can be controlled with Home App. It make any Android device appear as TV accesory. Where you can control on/off status, volume and dpad control via Control Center remote, and launch certain predefined app defined in the configuration.
