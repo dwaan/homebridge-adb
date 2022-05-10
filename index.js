@@ -173,12 +173,13 @@ class ADBPlugin {
 			});
 			// Playback event
 			if (this.enablePlaybackSensor == YES) {
-				this.adb.on("playback", () => {
+				this.adb.on("playback", (appId, playback, message) => {
 					if (this.isPlaying == this.adb.isPlayback) return;
 
 					this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
 					this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
 					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
+					if (message) this.displayDebug(message.trim());
 				});
 			}
 		});
