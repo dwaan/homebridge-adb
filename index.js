@@ -580,7 +580,7 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayDebug(text) {
-		this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+		if (this.debug) this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
 	}
 
 	/**
