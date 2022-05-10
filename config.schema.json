@@ -609,7 +609,7 @@
 							"title": "Inputs",
 							"key": "accessories[].inputs",
 							"type": "array",
-							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID.",
+							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID. For command, you can put ADB shell command, eg: \"monkey -p com.termux 1\". Or, you can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
 							"items": [
 								{
 									"type": "flex",
@@ -689,7 +689,7 @@
 							"title": "Control Center Remote and Power ON/OFF",
 							"expandable": true,
 							"expanded": false,
-							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can also put a shell script instead of keycode to run your own command. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
+							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can put ADB shell command, eg: \"monkey -p com.termux 1\". You can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
 							"items": [
 								{
 									"title": "Volume",
