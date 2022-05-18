@@ -179,7 +179,7 @@ class ADBPlugin {
 					this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
 					this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
 					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
-					if (message) this.displayDebug(message.trim());
+					if (message) this.displayDebug("Playback debug:\n" + message.trim());
 				});
 			}
 		});
@@ -341,7 +341,7 @@ class ADBPlugin {
 
 					if (this.mac) {
 						this.displayDebug("Wake On LAN - Sending magic");
-						wol.wake(`${this.mac}`, wol.WakeOptions, (error) => {
+						wol.wake(`${this.mac}`, wol.WakeOptions, error => {
 							this.adb.state().then(({ result, message }) => {
 								if (error) throw error;
 								if (!result) throw message;
@@ -369,7 +369,7 @@ class ADBPlugin {
 							this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 						}).catch(error => {
 							this.powerOnChange = NO;
-							this.displayDebug("Power On - Failed");
+							this.displayInfo("Power On - Failed");
 
 							this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 
@@ -389,7 +389,7 @@ class ADBPlugin {
 						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 					}).catch(error => {
 						this.powerOnChange = NO;
-						this.displayDebug("Power Off - Failed");
+						this.displayInfo("Power Off - Failed");
 
 						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 
