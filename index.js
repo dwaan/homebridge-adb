@@ -158,30 +158,85 @@ class ADBPlugin {
 			this.handleRemoteControl();
 
 			// Power events
-			this.adb.on("awake", () => {
-				this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
-				this.displayInfo(this.green(`Awake`));
-			});
-			this.adb.on("sleep", () => {
-				this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
-				this.displayInfo(this.red(`Sleep`));
-			});
-			// App change event
-			this.parseInput(this.adb.currentAppID);
-			this.adb.on("appChange", () => {
+
+			let count = 0;
+			this.adb.on(`update`, (type, message, debug) => {
+				switch (type) {
+					// Connection events
+					case `connecting`:
+						this.displayDebug("Connecting...");
+						break;
+					case `timeout`:
+						this.displayDebug("Timeout...");
+						break;
+					case `status`:
+						if (count++ == 0) this.displayDebug(`Alive ${Date()}`);
+						if (count >= 60) count = 0;
+						break;
+					case `connected`:
+						this.displayDebug("Connected");
+						break;
+					case `disconnected`:
+						this.displayDebug("Not connected");
+						break;
+					case `authorized`:
+						this.displayDebug("Authorized");
+						break;
+					case `unauthorized`:
+						this.displayDebug("Unauthorized");
+						break;
+
+					// App events
+					case `appChange`:
+						this.parseInput(this.adb.currentAppID);
+						break;
+					case `playback`:
+						if (this.enablePlaybackSensor == YES) {
+							if (this.isPlaying == this.adb.isPlayback) return;
+
+							this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
+							this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
+							this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
+							if (debug) this.displayDebug("Playback debug:\n" + debug.trim());
+						}
+						break;
+
+					// Sleep/awake events
+					case `awake`:
+						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
+						this.displayInfo(this.green(`Awake`));
+						break;
+					case `sleep`:
+						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
+						this.displayInfo(this.red(`Sleep`));
+						break;
+
+					// Power events
+					case `powerOn`:
+						this.displayDebug(`Turning power on`);
+						break;
+					case `powerOff`:
+						this.displayDebug(`Turning power off`);
+						break;
+					case `debugPowerOn`:
+						this.displayDebug(`Turning power on: ${message.awake}, ${debug}`);
+						break;
+					case `debugPowerOff`:
+						this.displayDebug(`Turning power off: ${message.awake}, ${debug}`);
+						break;
+					case `powerOnStatus`:
+						this.displayDebug(`Turning power on: ${message}`);
+						break;
+					case `powerOffStatus`:
+						this.displayDebug(`Turning power off: ${message}`);
+						break;
+
+					default:
+						break;
+				}
+				// App change event
 				this.parseInput(this.adb.currentAppID);
 			});
-			// Playback event
-			if (this.enablePlaybackSensor == YES) {
-				this.adb.on("playback", (appId, playback, message) => {
-					if (this.isPlaying == this.adb.isPlayback) return;
-
-					this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
-					this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
-					this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
-					if (message) this.displayDebug("Playback debug:\n" + message.trim());
-				});
-			}
 		});
 	}
 
@@ -373,7 +428,7 @@ class ADBPlugin {
 
 							this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.INACTIVE);
 
-							if (error) this.displayDebug(`Power on error message:\n${error}`);
+							if (error) this.displayDebug(`Power on error message: ${error}`);
 						});
 					}
 				} else {
@@ -393,7 +448,7 @@ class ADBPlugin {
 
 						this.accessoryService.updateCharacteristic(Characteristic.Active, Characteristic.Active.ACTIVE);
 
-						if (error) this.displayDebug(`Power off error message:\n${error}`);
+						if (error) this.displayDebug(`Power off error message: ${error}`);
 					});
 				}
 			}).onGet(() => this.adb.isAwake ? Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE);
@@ -580,7 +635,7 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayDebug(text) {
-		if (this.debug) this.log.info(`\x1b[2m${this.name} - ${text}\x1b[0m`);
+		if (this.debug) this.log.info(`\x1b[2m${this.name} - 🐞 ${text}\x1b[0m`);
 	}
 
 	/**
@@ -588,7 +643,7 @@ class ADBPlugin {
 	 * @param {string} text text to display in Homebridge log
 	 */
 	displayInfo(text) {
-		this.log.info(`${this.name} - ${text}`);
+		this.log.info(`${this.name} - 🤖 ${text}`);
 	}
 }
 
