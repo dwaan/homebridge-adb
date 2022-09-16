@@ -213,7 +213,7 @@
 						},
 						"hidenumber": {
 							"type": "boolean",
-							"title": "Hide Inputs' number in Home App",
+							"title": "Hide 'Inputs' number in Home App",
 							"oneOf": [
 								{
 									"title": "Yes",
@@ -370,7 +370,7 @@
 						"playbacksensorexclude": {
 							"type": "string",
 							"title": "Exclude this app from Playback Sensor",
-							"placeholder": "Eg: com.your.app.id"
+							"placeholder": "eg: com.your.app.id"
 						},
 						"debug": {
 							"type": "boolean",
