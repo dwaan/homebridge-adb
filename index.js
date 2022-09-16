@@ -170,7 +170,7 @@ class ADBPlugin {
 						this.displayDebug("Timeout...");
 						break;
 					case `status`:
-						if (count++ == 0) this.displayDebug(`Alive ${Date()}`);
+						if (count++ == 0) this.displayDebug(`Alive: ${Date()}`);
 						if (count >= 60) count = 0;
 						break;
 					case `connected`:
@@ -183,7 +183,7 @@ class ADBPlugin {
 						this.displayDebug("Authorized");
 						break;
 					case `unauthorized`:
-						this.displayDebug("Unauthorized");
+						this.displayInfo(`\n\n\t${this.red("WARNING: Device unauthorized")}.\n\tCheck your Android device for authorization popup.\n`);
 						break;
 
 					// App events
