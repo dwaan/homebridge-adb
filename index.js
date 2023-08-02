@@ -188,13 +188,14 @@ class ADBPlugin {
 
 					// App events
 					case `appChange`:
-						this.parseInput(this.adb.currentAppID);
+						this.displayDebug(`App change to ${this.adb.getCurrentAppId()}`);
+						this.parseInput(this.adb.getCurrentAppId());
 						break;
 					case `playback`:
 						if (this.enablePlaybackSensor == YES) {
-							if (this.isPlaying == this.adb.isPlayback) return;
+							if (this.isPlaying == this.adb.getPlaybackStatus()) return;
 
-							this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.isPlayback ? YES : NO;
+							this.isPlaying = this.playbackSensorExclude.includes(this.currentAppID) ? NO : this.adb.getPlaybackStatus() ? YES : NO;
 							this.displayInfo(`Playback - ${this.isPlaying ? this.green(`On`) : this.red(`Off`)}`);
 							this.accessoryPlaybackSensorService.updateCharacteristic(Characteristic.MotionDetected, this.isPlaying);
 							if (debug) this.displayDebug("Playback debug:\n" + debug.trim());
@@ -235,7 +236,7 @@ class ADBPlugin {
 						break;
 				}
 				// App change event
-				this.parseInput(this.adb.currentAppID);
+				this.parseInput(this.adb.getCurrentAppId());
 			});
 		});
 	}
@@ -386,7 +387,7 @@ class ADBPlugin {
 	handleOnOff() {
 		this.accessoryService.getCharacteristic(Characteristic.Active)
 			.onSet((state) => {
-				if (state == this.adb.isAwake || this.powerOnChange == YES) return;
+				if (state == this.adb.getPowerStatus() || this.powerOnChange == YES) return;
 
 				this.powerOnChange = YES;
 
@@ -451,7 +452,7 @@ class ADBPlugin {
 						if (error) this.displayDebug(`Power off error message: ${error}`);
 					});
 				}
-			}).onGet(() => this.adb.isAwake ? Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE);
+			}).onGet(() => this.adb.getPowerStatus() ? Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE);
 	}
 
 	/**
