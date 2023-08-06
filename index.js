@@ -20,7 +20,6 @@ module.exports = (homebridge) => {
 	homebridge.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, ADBPluginPlatform, true);
 };
 
-
 class ADBPlugin {
 	constructor(log, config, api) {
 		if (!config) return;
@@ -93,11 +92,15 @@ class ADBPlugin {
 		// generate a UUID
 		const uuid = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name);
 		const uuidos = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name + "OccupancySensor");
+		const uuidsi = this.api.hap.uuid.generate('homebridge:adb-plugin' + this.ip + this.name + "SwitchInput");
 
 		// create the external accessory
 		this.accessory = new this.api.platformAccessory(this.name, uuid);
-		// create the playback sensor accesory
+		// create the playback sensor accessory
 		if (this.enablePlaybackSensor == YES) this.accessoryPlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
+		// create switch input
+		this.switchInputs = new this.api.platformAccessory(this.name + " Switch Inputs", uuidsi);
+		this.switchInputsService = this.switchInputs.addService(Service.Switch);
 
 		// set the external accessory category
 		switch (this.category) {
@@ -133,13 +136,13 @@ class ADBPlugin {
 
 		/**
 		 * Publish as external accessory
-		 * Check ADB connection before publishing the accesory
+		 * Check ADB connection before publishing the accessory
 		 */
 
 		this.displayInfo(`Initializing`);
 
 		// Get device information
-		this.getAccessoryInformations().then(() => {
+		this.createAccessories().then(() => {
 			// Get the accessory information
 			this.adb.update().catch(error => {
 				if (error) this.displayDebug(`Update error message:\n${error}`);
@@ -246,7 +249,7 @@ class ADBPlugin {
 	/**
 	 * Get accessory information to be used in Home app as identifier
 	 */
-	async getAccessoryInformations() {
+	async createAccessories() {
 		let { result, message } = await this.adb.model();
 
 		// Get accessory information
@@ -255,6 +258,7 @@ class ADBPlugin {
 
 		// Create inputs
 		this.createInputs();
+		this.createSwitchInputs();
 
 		// Publish tv accessories
 		this.createTV(message);
@@ -312,7 +316,7 @@ class ADBPlugin {
 				if (!this.hidenumber) name = `${humanNumber}. ${name}`;
 			}
 
-			if (targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`Input: ${name}`);
+			if (targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`📺 Input: ${name}`);
 			let service = this.accessory.addService(Service.InputSource, `Input - ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
@@ -330,7 +334,28 @@ class ADBPlugin {
 	}
 
 	/**
-	 * Create television accesory based on ADB information
+	 * Create a playback sensor based on video playback
+	 * Due to limitation of ADB, support for playback will be limited
+	 * @param {string} output ADB output
+	 */
+	createSwitchInputs() {
+		if (this.input.length <= 0) return;
+
+		for (let i = 0; i < this.input.length; i++) {
+			const input = this.input[i];
+			const name = `${input.name}`;
+
+			if (input.switch) {
+				let service = this.accessory.addService(Service.Switch, `${name}`, i);
+				this.handleSwitchInput(service);
+				this.switchInputsService.addLinkedService(service);
+				this.displayDebug(`🎚️ Switch: ${name}`);
+			}
+		};
+	}
+
+	/**
+	 * Create television accessory based on ADB information
 	 * @param {string} output ADB output
 	 */
 	createTV(output) {
@@ -488,7 +513,7 @@ class ADBPlugin {
 				this.inputOnChange = YES;
 
 				// Accessory what kind of command that the input is
-				if (state != 0 && this.input[state].id != OTHER_APP_ID) {
+				if (this.input[state].id != HOME_APP_ID && this.input[state].id != OTHER_APP_ID) {
 					let type = this.input[state].id.trim();
 					adb = this.input[state].adb;
 
@@ -512,6 +537,46 @@ class ADBPlugin {
 	}
 
 	/**
+	 * Handle control center remote controll
+	 */
+	handleSwitchInput(switchInput) {
+		if (!switchInput) return;
+
+		const index = switchInput.subtype;
+
+		switchInput.getCharacteristic(Characteristic.On)
+			.onSet((state) => {
+				if (this.inputOnChange == YES) return;
+
+				let adb = "input keyevent KEYCODE_HOME";
+
+				this.inputOnChange = YES;
+
+				if (state) {
+					// Accessory what kind of command that the input is
+					let type = this.input[index].id.trim();
+					adb = this.input[index].adb;
+
+					if (!adb && !type.includes(" ") && type.includes(".")) adb = type;
+				}
+
+				this.adb.launchApp(adb).then(({ result, message }) => {
+					if (!result) throw message;
+
+					this.inputIndex = index;
+					this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, index);
+					this.inputOnChange = NO;
+					this.displayInfo(`Current app: ${this.input[index].name}`);
+				}).catch(error => {
+					this.inputOnChange = NO;
+					this.displayInfo(`Can't open: ${this.input[index].name}`)
+					if (error) this.displayDebug(`Launch error message:\n${error}`);
+				});
+			})
+			.onGet(() => this.adb.getPowerStatus() ? this.inputIndex == switchInput.subtype ? true : false : false);
+	}
+
+	/**
 	 * Handle playback sensor
 	 */
 	handleMediaAsSensor() {
@@ -520,7 +585,7 @@ class ADBPlugin {
 	}
 
 	/**
-	 * Handle control center remote controll
+	 * Handle control center remote control
 	 */
 	handleRemoteControl() {
 		this.accessoryService.getCharacteristic(Characteristic.RemoteKey)
@@ -580,6 +645,7 @@ class ADBPlugin {
 	}
 
 
+	// Output text in color
 	red(text) { return `\x1B[31m${text}\x1B[0m`; }
 	green(text) { return `\x1B[32m${text}\x1B[0m`; }
 
@@ -635,16 +701,19 @@ class ADBPlugin {
 	 * A helper to output log, only appeared after with debug config set to true
 	 * @param {string} text text to display in Homebridge log
 	 */
-	displayDebug(text) {
-		if (this.debug) this.log.info(`\x1b[2m${this.name} - 🐞 ${text}\x1b[0m`);
+	displayDebug(...args) {
+		args.unshift(`\x1b[2m${this.name} - 🐞`);
+		args.push(`\x1b[0m`);
+		if (this.debug) this.log.info(...args);
 	}
 
 	/**
 	 * A helper to output log
 	 * @param {string} text text to display in Homebridge log
 	 */
-	displayInfo(text) {
-		this.log.info(`${this.name} - 🤖 ${text}`);
+	displayInfo(...args) {
+		args.unshift(`${this.name} - 🤖`);
+		this.log.info(...args);
 	}
 }
 

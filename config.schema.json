@@ -207,6 +207,11 @@
 										"type": "string",
 										"placeholder": "eg: monkey -p home 1",
 										"required": false
+									},
+									"switch": {
+										"title": "also, display as a switch",
+										"type": "boolean",
+										"required": false
 									}
 								}
 							}
@@ -609,24 +614,35 @@
 							"title": "Inputs",
 							"key": "accessories[].inputs",
 							"type": "array",
-							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID. For command, you can put ADB shell command, eg: \"monkey -p com.termux 1\". Or, you can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
+							"description": "Add more inputs to your device. This plugins only support max 50 inputs, after adding more then 50 inputs, you need to remove and readd your device to Home App for the inputs to be displayed properly. Check Homebridge logs for current App ID. For command, you can put ADB shell command, eg: \"monkey -p com.termux 1\". Or, you can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\". Optionally, you can make the input to display as a switch, so you can ask Siri to turn it on or off. As a switch, turning it off will make the device navigate to home screen.",
 							"items": [
 								{
 									"type": "flex",
 									"displayFlex": false,
-									"flex-direction": "row",
+									"flex-direction": "column",
 									"items": [
 										{
-											"key": "accessories[].inputs[].name",
-											"flex": "3 3 70px"
+											"type": "flex",
+											"displayFlex": false,
+											"flex-direction": "row",
+											"items": [
+												{
+													"key": "accessories[].inputs[].name",
+													"flex": "3 3 70px"
+												},
+												{
+													"key": "accessories[].inputs[].id",
+													"flex": "5 5 170px"
+												},
+												{
+													"key": "accessories[].inputs[].adb",
+													"flex": "5 5 170px"
+												}
+											]
 										},
 										{
-											"key": "accessories[].inputs[].id",
-											"flex": "5 5 170px"
-										},
-										{
-											"key": "accessories[].inputs[].adb",
-											"flex": "5 5 170px"
+											"key": "accessories[].inputs[].switch",
+											"flex": "1 1 1"
 										}
 									]
 								}
@@ -655,7 +671,7 @@
 							"title": "Playback Sensor",
 							"expandable": true,
 							"expanded": false,
-							"description": "Create motion sensor based on media playback activities (limited device support)",
+							"description": "Create motion sensor based on media playback activities (limited device support). You can provide one or more app ids to exclude it from playback sensor, use space between the app ids to seperate them.",
 							"items": [
 								{
 									"type": "flex",
@@ -689,11 +705,11 @@
 							"title": "Control Center Remote and Power ON/OFF",
 							"expandable": true,
 							"expanded": false,
-							"description": "Assign custom ADB keycode for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can put ADB shell command, eg: \"monkey -p com.termux 1\". You can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\"",
+							"description": "Assign custom ADB keycodes for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can put ADB shell command, eg: \"monkey -p com.termux 1\". You can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\". Leave them empty to use default values.",
 							"items": [
 								{
 									"title": "Volume",
-									"description": "Costum ADB keycode or shell script for control center remote volume control",
+									"description": "Custom ADB keycodes or shell scripts for control center remote volume control",
 									"expandable": false,
 									"expanded": true,
 									"items": [
