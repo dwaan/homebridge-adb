@@ -100,6 +100,7 @@ class ADBPlugin {
 		if (this.enablePlaybackSensor == YES) this.accessoryPlaybackSensor = new this.api.platformAccessory(this.name + " Playback Sensor", uuidos);
 		// create switch input
 		this.switchInputs = new this.api.platformAccessory(this.name + " Switch Inputs", uuidsi);
+		this.switchInputsArray = [];
 		this.switchInputsService = this.switchInputs.addService(Service.Switch);
 
 		// set the external accessory category
@@ -160,11 +161,12 @@ class ADBPlugin {
 			// Show Control Center Remote if needed
 			this.handleRemoteControl();
 
-			// Power events
-
+			// Loop events
 			let count = 0;
 			this.adb.on(`update`, (type, message, debug) => {
 				switch (type) {
+					case `firstrun`:
+						break;
 					// Connection events
 					case `connecting`:
 						this.displayDebug("Connecting...");
@@ -191,8 +193,13 @@ class ADBPlugin {
 
 					// App events
 					case `appChange`:
-						this.displayDebug(`App change to ${this.adb.getCurrentAppId()}`);
-						this.parseInput(this.adb.getCurrentAppId());
+						const currentAppId = this.adb.getCurrentAppId();
+
+						this.displayDebug(`App change to ${currentAppId}`);
+						this.parseInput(currentAppId);
+
+						this.switchInputs.currentId = currentAppId;
+						this.switchInputs.turnOn(`from app change event`);
 						break;
 					case `playback`:
 						if (this.enablePlaybackSensor == YES) {
@@ -238,8 +245,6 @@ class ADBPlugin {
 					default:
 						break;
 				}
-				// App change event
-				this.parseInput(this.adb.getCurrentAppId());
 			});
 		});
 	}
@@ -341,17 +346,31 @@ class ADBPlugin {
 	createSwitchInputs() {
 		if (this.input.length <= 0) return;
 
+		this.switchInputs.currentId = this.adb.getCurrentAppId();
+		this.switchInputs.add = service => {
+			this.switchInputsArray.push(service);
+		}
+		this.switchInputs.turnOn = (trace = 'from unknown') => {
+			this.switchInputsArray.forEach(accessory => {
+				accessory.updateCharacteristic(Characteristic.On, accessory.id == this.switchInputs.currentId ? YES : NO);
+			});
+			this.displayDebug(`🎚️ Updating switches`, trace, this.switchInputs.currentId);
+		}
+
 		for (let i = 0; i < this.input.length; i++) {
 			const input = this.input[i];
 			const name = `${input.name}`;
 
 			if (input.switch) {
 				let service = this.accessory.addService(Service.Switch, `${name}`, i);
+				service.id = input.id;
 				this.handleSwitchInput(service);
 				this.switchInputsService.addLinkedService(service);
+				this.switchInputs.add(service);
+
 				this.displayDebug(`🎚️ Switch: ${name}`);
 			}
-		};
+		}
 	}
 
 	/**
@@ -524,12 +543,13 @@ class ADBPlugin {
 					if (!result) throw message;
 
 					this.inputIndex = state;
-					this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, state);
+					this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, state < 0 ? 0 : state);
+
 					this.inputOnChange = NO;
-					this.displayInfo(`Current app: ${this.input[state].name}`);
+					this.displayInfo(`Input - Current app: ${this.input[state].id}`);
 				}).catch(error => {
 					this.inputOnChange = NO;
-					this.displayInfo(`Can't open: ${this.input[state].name}`)
+					this.displayInfo(`Input - Can't open: ${this.input[state].id}`)
 					if (error) this.displayDebug(`Launch error message:\n${error}`);
 				});
 			})
@@ -545,7 +565,7 @@ class ADBPlugin {
 		const index = switchInput.subtype;
 
 		switchInput.getCharacteristic(Characteristic.On)
-			.onSet((state) => {
+			.onSet(state => {
 				if (this.inputOnChange == YES) return;
 
 				let adb = "input keyevent KEYCODE_HOME";
@@ -560,20 +580,23 @@ class ADBPlugin {
 					if (!adb && !type.includes(" ") && type.includes(".")) adb = type;
 				}
 
+				console.log(state);
+
 				this.adb.launchApp(adb).then(({ result, message }) => {
 					if (!result) throw message;
 
-					this.inputIndex = index;
-					this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, index);
+					this.switchInputs.currentId = this.adb.getCurrentAppId();
+					this.switchInputs.turnOn(`from switches handle`);
+
 					this.inputOnChange = NO;
-					this.displayInfo(`Current app: ${this.input[index].name}`);
+					this.displayInfo(`Switch - Current app: ${index < 0 ? 'other' : this.switchInputs.currentId}`);
 				}).catch(error => {
 					this.inputOnChange = NO;
-					this.displayInfo(`Can't open: ${this.input[index].name}`)
+					this.displayInfo(`Switch - Can't open: ${index < 0 ? 'other' : this.switchInputs.currentId}`);
 					if (error) this.displayDebug(`Launch error message:\n${error}`);
 				});
 			})
-			.onGet(() => this.adb.getPowerStatus() ? this.inputIndex == switchInput.subtype ? true : false : false);
+			.onGet(() => this.adb.getPowerStatus() ? this.switchInputs.currentId == switchInput.id ? true : false : false);
 	}
 
 	/**
@@ -662,7 +685,6 @@ class ADBPlugin {
 		this.input.forEach((input, i) => {
 			if (appId == input.id) index = i;
 		});
-
 		if (index !== false) this.inputIndex = index;
 
 		// Other app, extract human readable name from app id
@@ -694,7 +716,7 @@ class ADBPlugin {
 
 		// Set the accessory input to current selected app
 		this.accessoryService.updateCharacteristic(Characteristic.ActiveIdentifier, this.inputIndex);
-		this.displayInfo(`Current app id - \x1b[4m${this.currentAppID}\x1b[0m`);
+		this.displayInfo(`Input - Current app id - \x1b[4m${this.currentAppID}\x1b[0m`);
 	}
 
 	/**
