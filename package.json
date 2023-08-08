@@ -1,6 +1,6 @@
 {
 	"name": "homebridge-adb",
-	"version": "2.2.1",
+	"version": "2.2.2",
 	"description": "A HomeBridge plugin to control ADB enabled Android devices",
 	"main": "index.js",
 	"engines": {
