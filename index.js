@@ -82,7 +82,9 @@ class ADBPlugin {
 			interval: this.interval,
 			timeout: this.timeout,
 			playbackDelayOff: this.playbackSensorDelayOff,
-			retryPowerOn: this.retryPowerOn
+			retryPowerOn: this.retryPowerOn,
+			keycodePowerOn: this.config.poweron,
+			keycodePowerOff: this.config.poweroff,
 		});
 
 		/**
@@ -362,7 +364,9 @@ class ADBPlugin {
 			const name = `${input.name}`;
 
 			if (input.switch) {
-				let service = this.accessory.addService(Service.Switch, `${name}`, i);
+				let service = this.accessory.addService(Service.Switch, `${name}`, i)
+					.setCharacteristic(Characteristic.Name, name)
+					.setCharacteristic(Characteristic.ConfiguredName, name);
 				service.id = input.id;
 				this.handleSwitchInput(service);
 				this.switchInputsService.addLinkedService(service);
@@ -460,7 +464,7 @@ class ADBPlugin {
 							});
 						});
 					} else {
-						this.adb.powerOn(this.config.poweron).then(({ result, message }) => {
+						this.adb.powerOn().then(({ result, message }) => {
 							if (!result) throw message;
 
 							this.powerOnChange = NO;
@@ -480,7 +484,7 @@ class ADBPlugin {
 					// Power Off
 					this.displayDebug("Trying to turn OFF accessory");
 
-					this.adb.powerOff(this.config.poweroff).then(({ result, message }) => {
+					this.adb.powerOff().then(({ result, message }) => {
 						if (!result) throw message;
 
 						this.powerOnChange = NO;
@@ -507,7 +511,7 @@ class ADBPlugin {
 
 		this.accessoryTVSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
 			.onSet((state) => {
-				this.adb.sendKeycode(state ? this.config.wolumedown || "KEYCODE_VOLUME_DOWN" : this.config.wolumeup || "KEYCODE_VOLUME_UP").then(({ result, message }) => {
+				this.adb.sendKeycode(state ? this.config.volumedown || "KEYCODE_VOLUME_DOWN" : this.config.volumeup || "KEYCODE_VOLUME_UP").then(({ result, message }) => {
 					if (!result) throw message;
 					this.displayDebug(`Volume - ${state ? 'Increased' : 'Decreased'}`);
 				}).catch(error => {
@@ -568,19 +572,17 @@ class ADBPlugin {
 			.onSet(state => {
 				if (this.inputOnChange == YES) return;
 
+				const appId = this.input[index].id.trim();
 				let adb = "input keyevent KEYCODE_HOME";
 
 				this.inputOnChange = YES;
 
 				if (state) {
 					// Accessory what kind of command that the input is
-					let type = this.input[index].id.trim();
 					adb = this.input[index].adb;
 
-					if (!adb && !type.includes(" ") && type.includes(".")) adb = type;
+					if (!adb && !appId.includes(" ") && appId.includes(".")) adb = appId;
 				}
-
-				console.log(state);
 
 				this.adb.launchApp(adb).then(({ result, message }) => {
 					if (!result) throw message;
@@ -589,10 +591,10 @@ class ADBPlugin {
 					this.switchInputs.turnOn(`from switches handle`);
 
 					this.inputOnChange = NO;
-					this.displayInfo(`Switch - Current app: ${index < 0 ? 'other' : this.switchInputs.currentId}`);
+					this.displayInfo(`Switch - Current app: ${appId}`);
 				}).catch(error => {
 					this.inputOnChange = NO;
-					this.displayInfo(`Switch - Can't open: ${index < 0 ? 'other' : this.switchInputs.currentId}`);
+					this.displayInfo(`Switch - Can't open: ${appId}`);
 					if (error) this.displayDebug(`Launch error message:\n${error}`);
 				});
 			})

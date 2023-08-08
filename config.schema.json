@@ -209,7 +209,7 @@
 										"required": false
 									},
 									"switch": {
-										"title": "also, display as a switch",
+										"title": "Display as a switch also",
 										"type": "boolean",
 										"required": false
 									}
