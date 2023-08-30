@@ -434,7 +434,7 @@ class ADBPlugin {
 	 */
 	handleOnOff() {
 		this.accessoryService.getCharacteristic(Characteristic.Active)
-			.onSet((state) => {
+			.onSet(state => {
 				if (state == this.adb.getPowerStatus() || this.powerOnChange == YES) return;
 
 				this.powerOnChange = YES;
@@ -510,7 +510,7 @@ class ADBPlugin {
 		if (this.enableSpeaker == NO) return;
 
 		this.accessoryTVSpeakerService.getCharacteristic(Characteristic.VolumeSelector)
-			.onSet((state) => {
+			.onSet(state => {
 				this.adb.sendKeycode(state ? this.config.volumedown || "KEYCODE_VOLUME_DOWN" : this.config.volumeup || "KEYCODE_VOLUME_UP").then(({ result, message }) => {
 					if (!result) throw message;
 					this.displayDebug(`Volume - ${state ? 'Increased' : 'Decreased'}`);
@@ -528,7 +528,7 @@ class ADBPlugin {
 		if (this.input.length <= 0) return;
 
 		this.accessoryService.getCharacteristic(Characteristic.ActiveIdentifier)
-			.onSet((state) => {
+			.onSet(state => {
 				if (this.inputOnChange == YES) return;
 
 				let adb = "input keyevent KEYCODE_HOME";
@@ -614,7 +614,7 @@ class ADBPlugin {
 	 */
 	handleRemoteControl() {
 		this.accessoryService.getCharacteristic(Characteristic.RemoteKey)
-			.onSet((state) => {
+			.onSet(state => {
 				var key = "KEYCODE_HOME";
 
 				switch (state) {
