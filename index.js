@@ -740,8 +740,6 @@ class ADBPlugin {
 		this.log.info(...args);
 	}
 }
-
-
 class ADBPluginPlatform {
 	constructor(log, config, api) {
 		if (!config) return;
