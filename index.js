@@ -257,11 +257,12 @@ class ADBPlugin {
 	 * Get accessory information to be used in Home app as identifier
 	 */
 	async createAccessories() {
+		if(!this.adb.isConnected()) await this.adb.connect();
 		let { result, message } = await this.adb.model();
 
 		// Get accessory information
 		if (!result) message = ["", "", ""];
-		else message = message.split("\n");
+		else message = message.split(" | ");
 
 		// Create inputs
 		this.createInputs();
@@ -740,6 +741,7 @@ class ADBPlugin {
 		this.log.info(...args);
 	}
 }
+
 class ADBPluginPlatform {
 	constructor(log, config, api) {
 		if (!config) return;
