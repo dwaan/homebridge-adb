@@ -69,12 +69,18 @@ class ADBPlugin {
 		this.enablePlaybackSensor = this.config.playbacksensor || NO;
 		this.playbackSensorDelayOff = this.config.playbacksensordelay || 10000;
 		this.playbackSensorExclude = this.config.playbacksensorexclude || "";
+		// State detection
+		this.stateAdbCommand = this.config.stateAdbCommand;
+		this.stateAdbOutputAwake = this.config.stateAdbOutputAwake;
 		// Power
 		this.powerOnChange = NO;
 		this.wolLoop = EMPTY;
 		this.retryPowerOn = this.retrypoweron || 10;
 		// App
 		this.currentAppID = HOME_APP_ID;
+
+		console.log(this.stateAdbCommand);
+		console.log(this.stateAdbOutputAwake);
 
 		// Accessory status
 		this.adb = new adb(this.ip, {
@@ -85,6 +91,8 @@ class ADBPlugin {
 			retryPowerOn: this.retryPowerOn,
 			keycodePowerOn: this.config.poweron,
 			keycodePowerOff: this.config.poweroff,
+			stateAdbCommand: this.stateAdbCommand,
+			stateAdbOutputAwake: this.stateAdbOutputAwake
 		});
 
 		/**

@@ -546,6 +546,16 @@
 							"type": "string",
 							"title": "Volume Down",
 							"placeholder": "eg: KEYCODE_VOLUME_DOWN"
+						},
+						"stateAdbCommand": {
+							"type": "string",
+							"title": "State Command",
+							"placeholder": "eg: dumpsys power | grep mHoldingDisplaySuspendBlocker="
+						},
+						"stateAdbOutputAwake": {
+							"type": "string",
+							"title": "State Command Output",
+							"placeholder": "eg: true (case sensitive)"
 						}
 					}
 				}
@@ -883,6 +893,27 @@
 										{
 											"key": "accessories[].hideother",
 											"flex": "1 1 100px"
+										}
+									]
+								}
+							]
+						},
+						{
+							"title": "Advance Settings",
+							"expandable": true,
+							"expanded": false,
+							"description": "More advance settings. Leave it blank if you don't know what is this.",
+							"items": [
+								{
+									"type": "flex",
+									"displayFlex": true,
+									"flex-direction": "column",
+									"items": [
+										{
+											"key": "accessories[].stateAdbCommand"
+										},
+										{
+											"key": "accessories[].stateAdbOutputAwake"
 										}
 									]
 								}
