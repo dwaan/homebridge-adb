@@ -3,7 +3,7 @@
 [![Donate](https://badgen.net/badge/buymeacoffee/donate?icon=https://ico.now.sh/buymeacoffee/fff)](https://www.buymeacoffee.com/dwaan)
 
 <p align="center">
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
+<img src="https://raw.githubusercontent.com/homebridge/branding/master/logos/homebridge-color-round-stylized.png" width="150">
 </p>
 
 # Homebridge ADB and Shell Scripts
