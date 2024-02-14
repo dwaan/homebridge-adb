@@ -175,7 +175,7 @@ If you're using Homebridge Config UI X, you can configure your device there, but
 
 If your have any question, refer to [FAQ.md](FAQ.md) first before sending GitHub issues.
 
-If want to support plugin, [you can buy me an Ice cream by follow this link](https://www.buymeacoffee.com/dwaan). Or feel free to share and stared this repo.
+If want to support this plugin, [you can buy me an Ice cream by follow this link](https://www.buymeacoffee.com/dwaan). Or feel free to share and stared this repo.
 
 ## Sidenote
 
