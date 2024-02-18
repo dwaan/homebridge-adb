@@ -169,7 +169,7 @@ Here an example of configuration that you can use.
 	* *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
 	* *debug* (optional): if set to *true*, plugin will output more debug info in homebridge log.
 	* *skipSpeaker* (optional): if set to *true*, an accompanying speaker will not be initialized for the device and will disable volume control in Control Center Remote.
-	* *launcherid* (optional): Some launcher like [https://play.google.com/store/apps/details?id=com.spocky.projengmenu](projecttivy) can't be detected as the default launcher for the "Home" input. Write the app id so the plugins can recognize the launcher as the "Home" input.
+	* *launcherid* (optional): Some launcher like [projectivy](https://play.google.com/store/apps/details?id=com.spocky.projengmenu) (which is a nice launcher if you tired looking at forced ads from Google) can't be detected as the default launcher for the "Home" input. Write the app id so the plugins can recognize the launcher as the "Home" input.
 	* *stateAdbCommand* (optional): Some android device, seem to have different `dumpsys power` value to determine its state. Define your own adb shell command based on your device. eg: `dumpsys power | grep mWakefulness=`
 	* *stateAdbOutputAwake* (optional): Related to *stateAdbCommand*, define the output value that the command will output, remember it's case sensitive. eg: `Awake`
 
