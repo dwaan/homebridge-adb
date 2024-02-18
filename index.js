@@ -78,9 +78,8 @@ class ADBPlugin {
 		this.retryPowerOn = this.retrypoweron || 10;
 		// App
 		this.currentAppID = HOME_APP_ID;
-
-		console.log(this.stateAdbCommand);
-		console.log(this.stateAdbOutputAwake);
+		// Custom launcher app id
+		this.launcherid = this.config.launcherid;
 
 		// Accessory status
 		this.adb = new adb(this.ip, {
@@ -92,7 +91,8 @@ class ADBPlugin {
 			keycodePowerOn: this.config.poweron,
 			keycodePowerOff: this.config.poweroff,
 			stateAdbCommand: this.stateAdbCommand,
-			stateAdbOutputAwake: this.stateAdbOutputAwake
+			stateAdbOutputAwake: this.stateAdbOutputAwake,
+			launcherid: this.launcherid
 		});
 
 		/**

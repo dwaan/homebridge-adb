@@ -556,6 +556,11 @@
 							"type": "string",
 							"title": "State Command Output",
 							"placeholder": "eg: true (case sensitive)"
+						},
+						"launcherid": {
+							"type": "string",
+							"title": "Default Launcher App Id",
+							"placeholder": "eg: com.spocky.projengmenu"
 						}
 					}
 				}
@@ -715,7 +720,7 @@
 							"title": "Control Center Remote and Power ON/OFF",
 							"expandable": true,
 							"expanded": false,
-							"description": "Assign custom ADB keycodes for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can put ADB shell command, eg: \"monkey -p com.termux 1\". You can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\". Leave them empty to use default values.",
+							"description": "Assign custom ADB keycodes for Control Center Remote. You can put one or more keycodes by seperating them with space, eg: \"KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN\". You can put ADB shell command, eg: \"monkey -p com.termux 1\". You can also put a shell script. Put \"shell\" identifier to let the plugins know it's a shell script, eg: \"shell sh ./myscript.sh\". Or, you can also run an app by putting the app id, eg: \"com.google.android.youtube.tv\". Leave them empty to use default values.",
 							"items": [
 								{
 									"title": "Volume",
@@ -914,6 +919,9 @@
 										},
 										{
 											"key": "accessories[].stateAdbOutputAwake"
+										},
+										{
+											"key": "accessories[].launcherid"
 										}
 									]
 								}

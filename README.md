@@ -163,6 +163,7 @@ Here an example of configuration that you can use.
 		* You can put one or more keycodes by seperating them with space, eg: `volumeup: "KEYCODE_VOLUME_UP KEYCODE_VOLUME_DOWN"`. See [https://developer.android.com/reference/android/view/KeyEvent](https://developer.android.com/reference/android/view/KeyEvent) for the keycode list. Or,
 		* You can put a ADB shell script to run a shell script inside your device, eg: `leftbutton: "monkey -p com.termux 1"`. Or,
 		* You can also put a shell script. Put `shell` identifier to let the plugins know it's a shell script, eg: `volumeup: "shell sh ./myscript.sh"`.
+		* You can also put app id to run app, because why not?, eg: `infobutton: "com.google.android.youtube.tv"`.
 	* *hidenumber* (optional): if set to *true*, plugin will hide number inputs in Home App.
 	* *hidehome* (optional): if set to *true*, plugin will hide "Home" input in Home App.
 	* *hideother* (optional): if set to *true*, plugin will hide "Other" input in Home App.
