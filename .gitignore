@@ -104,3 +104,14 @@ dist
 .tern-port
 homebridge-adb.code-workspace
 package-lock.json
+
+# Homebridge
+accessories/
+backups/
+persist/
+.uix-*
+config.json
+auth.json
+
+# Development
+target/

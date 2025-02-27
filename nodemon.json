@@ -1,11 +1,12 @@
 {
 	"watch": [
 		"**/*.js",
+		"**/*.json",
 		"~/.homebridge/config.json"
 	],
 	"ext": "js",
 	"ignore": [],
-	"exec": "homebridge -I -D",
+	"exec": "homebridge -I -D -U ./ > homebridge.log",
 	"signal": "SIGTERM",
 	"env": {
 		"NODE_OPTIONS": "--trace-warnings"
