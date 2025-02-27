@@ -265,7 +265,7 @@ class ADBPlugin {
 	 * Get accessory information to be used in Home app as identifier
 	 */
 	async createAccessories() {
-		if(!this.adb.isConnected()) await this.adb.connect();
+		if (!this.adb.isConnected()) await this.adb.connect();
 		let { result, message } = await this.adb.model();
 
 		// Get accessory information
@@ -326,14 +326,14 @@ class ADBPlugin {
 				configured = Characteristic.IsConfigured.NOT_CONFIGURED;
 				targetVisibility = Characteristic.TargetVisibilityState.HIDDEN;
 				currentVisibility = Characteristic.CurrentVisibilityState.HIDDEN;
-				name = `${humanNumber}. Hidden Input`;
+				name = `${humanNumber} Hidden Input`;
 			} else {
 				name = `${input.name}`;
-				if (!this.hidenumber) name = `${humanNumber}. ${name}`;
+				if (!this.hidenumber) name = `${humanNumber} ${name}`;
 			}
 
 			if (targetVisibility == Characteristic.TargetVisibilityState.SHOWN) this.displayDebug(`📺 Input: ${name}`);
-			let service = this.accessory.addService(Service.InputSource, `Input - ${name}`, i);
+			let service = this.accessory.addService(Service.InputSource, `Input ${name}`, i);
 			service
 				.setCharacteristic(Characteristic.Identifier, i)
 				.setCharacteristic(Characteristic.ConfiguredName, name)
@@ -375,7 +375,6 @@ class ADBPlugin {
 			if (input.switch) {
 				let service = this.accessory.addService(Service.Switch, `${name}`, i)
 					.setCharacteristic(Characteristic.Name, name)
-					.setCharacteristic(Characteristic.ConfiguredName, name);
 				service.id = input.id;
 				this.handleSwitchInput(service);
 				this.switchInputsService.addLinkedService(service);
@@ -720,7 +719,7 @@ class ADBPlugin {
 			this.inputIndex = this.input.length - 1;
 			if (this.input[this.inputIndex]) this.input[this.inputIndex].id = appId;
 			if (this.input[this.inputIndex].service) {
-				if (!this.hidenumber) humanName = `${this.inputIndex + 1}. ${humanName}`;
+				if (!this.hidenumber) humanName = `${this.inputIndex + 1} ${humanName}`;
 				this.input[this.inputIndex].service.updateCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
 			}
 		}
@@ -776,5 +775,9 @@ class ADBPluginPlatform {
 			this.log.info('Please add one or more accessories in your config');
 			this.log.info('-------------------------------------------------');
 		}
+	}
+
+	removeAccessory(platformAccessory) {
+		this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [platformAccessory]);
 	}
 }

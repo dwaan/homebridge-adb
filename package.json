@@ -1,44 +1,41 @@
 {
-	"name": "homebridge-adb",
-	"version": "2.3.0",
-	"description": "A HomeBridge plugin to control ADB enabled Android devices",
-	"main": "index.js",
-	"engines": {
-		"node": ">=18.0.0",
-		"homebridge": ">=1.5.0"
-	},
-	"scripts": {
-		"test": "npm link && nodemon"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/dwaan/homebridge-adb.git"
-	},
-	"keywords": [
-		"homebridge",
-		"homebridge-plugin",
-		"adb",
-		"android",
-		"homekit"
-	],
-	"author": "dwaan",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/dwaan/homebridge-adb/issues"
-	},
-	"homepage": "https://github.com/dwaan/homebridge-adb#readme",
-	"dependencies": {
-		"nodejs-adb-wrapper": "1.4.0",
-		"wake_on_lan": "1.0.0"
-	},
-	"devDependencies": {
-		"homebridge": "^1.5.0",
-		"nodemon": "^3.0.3"
-	},
-	"funding": [
-		{
-			"type": "buymeacoffee",
-			"url": "https://www.buymeacoffee.com/dwaan"
-		}
-	]
+  "name": "homebridge-adb",
+  "version": "3.0.0",
+  "description": "A HomeBridge plugin to control ADB enabled Android devices",
+  "main": "index.js",
+  "author": "dwaan",
+  "funding": {
+    "type": "buymeacoffee",
+    "url": "https://buymeacoffee.com/dwaan"
+  },
+  "engines": {
+    "homebridge": "^1.6.0 || ^2.0.0-beta.0",
+    "node": "^18.20.4 || ^20.15.1 || ^22"
+  },
+  "scripts": {
+    "test": "npm link && nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dwaan/homebridge-adb.git"
+  },
+  "keywords": [
+    "homebridge",
+    "homebridge-plugin",
+    "adb",
+    "android",
+    "homekit"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dwaan/homebridge-adb/issues"
+  },
+  "homepage": "https://github.com/dwaan/homebridge-adb#readme",
+  "dependencies": {
+    "nodejs-adb-wrapper": "1.4.0",
+    "wake_on_lan": "1.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
 }
