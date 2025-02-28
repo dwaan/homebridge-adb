@@ -720,7 +720,11 @@ class ADBPlugin {
 			this.inputIndex = this.input.length - 1;
 			if (this.input[this.inputIndex]) this.input[this.inputIndex].id = appId;
 			if (this.input[this.inputIndex].service) {
-				if (!this.hidenumber) humanName = `${this.inputIndex + 1} ${humanName}`;
+				if (!this.hidenumber) {
+					let index = this.inputIndex + 1;
+					if (index < 10) index = "0" + index;
+					humanName = `${index} ${humanName}`;
+				}
 				this.input[this.inputIndex].service.updateCharacteristic(Characteristic.ConfiguredName, `${humanName}`);
 			}
 		}
