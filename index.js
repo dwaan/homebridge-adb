@@ -714,7 +714,7 @@ class ADBPlugin {
 				i++;
 			}
 			humanName = humanName.trim();
-			if (humanName != "Other") humanName = `Other '${humanName.trim()}'`;
+			if (humanName != "Other") humanName = `Other, ${humanName.trim()}`;
 
 			this.inputIndex = this.input.length - 1;
 			if (this.input[this.inputIndex]) this.input[this.inputIndex].id = appId;
