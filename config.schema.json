@@ -7,6 +7,12 @@
 	"schema": {
 		"type": "object",
 		"properties": {
+			"name": {
+			  "title": "Plugin Name",
+			  "type": "string",
+			  "default": "Homebridge ADB",
+			  "required": true
+			},
 			"accessories": {
 				"title": "Accessories",
 				"type": "array",
