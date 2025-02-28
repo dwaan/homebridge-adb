@@ -710,11 +710,12 @@ class ADBPlugin {
 					if (name[i] != "Com" && name[i] != "Android")
 						if (name[i] == "Vending") humanName += "Play Store";
 						else if (name[i] == "Gm") humanName += "GMail";
+						else if (name[i].toLowerCase() == "tv") humanName += (" " + "TV");
 						else humanName += (" " + name[i]);
 				i++;
 			}
 			humanName = humanName.trim();
-			if (humanName != "Other") humanName = `Other, ${humanName.trim()}`;
+			if (humanName != "Other") humanName = `${humanName.trim()}`;
 
 			this.inputIndex = this.input.length - 1;
 			if (this.input[this.inputIndex]) this.input[this.inputIndex].id = appId;
