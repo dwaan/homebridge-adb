@@ -6,7 +6,7 @@
 	],
 	"ext": "js",
 	"ignore": [],
-	"exec": "homebridge -I -D -U ./ > homebridge.log",
+	"exec": "homebridge -I -U ./",
 	"signal": "SIGTERM",
 	"env": {
 		"NODE_OPTIONS": "--trace-warnings"
