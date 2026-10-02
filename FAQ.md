@@ -9,7 +9,7 @@
 * Where can I use volume and D-Pad control for my accessory?
 	* First turn on "Apple TV Remote" control from your iOS accessory inside Settings -> Control Center. Then swipe down Control Center, you'll see a remote icon. Tap the remote icon to open the remote, you can use your iOS accessory screen for the D-Pad, and use your iOS accessory physical volume button to control your accessory volume.
 * Why I can't turn on my accessory after turning it off?
-	* Your accessory might disconnected from network connection after you turn off your accessory. Please make sure your accessory still able to recieve network connection when it turned off. If your accessory support Wake On LAN, please active it in the plugin by entering it's mac address. Alternatively you can install some app that prevent your accessory disconnected from network.
+	* Your accessory might disconnected from network connection after you turn off your accessory. Please make sure your accessory still able to receive network connection when it turned off. If your accessory support Wake On LAN, please active it in the plugin by entering it's mac address. Alternatively you can install some app that prevent your accessory disconnected from network.
 * Is this safe?
 	* Actually I don't know, it feels very dirty (I need to wash my hand everytime I use this) and hacky, but it works for me.
 * I found some bugs, what should I do?
