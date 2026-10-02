@@ -1,7 +1,7 @@
 {
   "name": "homebridge-adb",
   "displayName": "Homebridge ADB",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "A Homebridge plugin to control ADB enabled Android devices",
   "main": "index.js",
   "author": "dwaan",
@@ -10,8 +10,8 @@
     "url": "https://buymeacoffee.com/dwaan"
   },
   "engines": {
-    "homebridge": "^1.6.0 || ^2.0.0-beta.0",
-    "node": "^18.20.4 || ^20.15.1 || ^22"
+    "homebridge": ">=1.11.0 <3.0.0-0",
+    "node": "^18.12.0 || ^20.10.0 || ^22.11.0 || ^24.12.0 || ^26.5.0"
   },
   "scripts": {
     "test": "npm link && nodemon"
@@ -37,7 +37,7 @@
     "wake_on_lan": "^1.0.0"
   },
   "devDependencies": {
-    "homebridge": "^2.0.0-beta.0",
-    "nodemon": "^3.0.3"
+    "homebridge": "^2.4.0",
+    "nodemon": "^3.1.14"
   }
 }
